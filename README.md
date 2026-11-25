@@ -13,12 +13,12 @@ The app is plain **HTML + CSS + JavaScript with no build step and no dependencie
 ### Data: on-device storage
 - All rooms and plants are stored in the browser's `localStorage` under one versioned key (`plantPals.data.v2`). See [js/store.js](js/store.js). Data saved by an older version is upgraded automatically on load.
 - The app **starts empty**; no plant data ships with it.
-- **Your data** (Rooms tab) has three buttons:
+- **Settings → Your data** has the data buttons:
   - **Export backup** downloads everything as JSON. This matters because clearing browser data wipes the plants.
   - **Import backup** loads an export back in, replacing the current plants and rooms. It's also how to move plants from one device to another.
   - **Clear all plants** deletes every plant and its history. Rooms and settings are kept.
 - **Monthly backups.** Web apps can't save files silently, so backups come in two kinds:
-  - **Automatic snapshots:** every 30 days, and before *Clear all plants* or an import, the app saves a copy of your plants inside its own storage (up to 3 monthly + 3 safety copies). *Restore…* in the data panel brings one back. These protect against mistakes, but not against uninstalling.
+  - **Automatic snapshots:** every 30 days, and before *Clear all plants* or an import, the app saves a copy of your plants inside its own storage (up to 3 monthly + 3 safety copies). *Restore a snapshot* in Settings brings one back. These protect against mistakes, but not against uninstalling.
   - **Backup file reminder:** 30 days after the last backup file (or after first use), Today shows a "Monthly backup time" banner. *Save* downloads the file (on Android it goes to Downloads); *Later* snoozes it for a week.
 - Import also accepts a prepared file with a 4-week rota. If the file has a `scheduleStart` date and per-plant `scheduleDays` (day numbers 1–28 of a repeating cycle), each plant's first due date is set to its next rota day. That way an existing schedule carries straight over instead of every plant being due at once.
 
@@ -89,8 +89,15 @@ Each plant's due date is frozen when holiday mode is switched on, so the plan yo
 
 Some plants could fit more than one group; they go where a non-specialist would look first. For example, Ponytail Palm is botanically a succulent but is listed under palms, and Christmas Cactus is under cacti rather than flowering.
 
+### Settings page
+The ⚙️ **Settings** tab gathers:
+- **Watering:** the season schedule (same as the banner on Today) and holiday mode.
+- **Appearance:** theme *Automatic* (follows the phone), *Light* or *Dark*. The theme is applied by a small script in `<head>` before the first paint, so there's no flash of the wrong theme. Dark-mode CSS is keyed on `<html data-theme="dark">`. The page also declares `<meta name="color-scheme" content="light dark">`, so Android Chrome's "dark theme for sites" option doesn't auto-darken or invert the page and plant drawings.
+- **Your data:** backup status, Export / Import backup, Restore a snapshot, Clear all plants.
+- **About.**
+
 ### Design
-- **Theme:** warm oranges and yellows on a cream background, with a warm-brown dark mode that follows the phone setting. Colours are CSS variables at the top of [css/styles.css](css/styles.css).
+- **Theme:** warm oranges and yellows on a cream background, with a warm-brown dark mode (automatic or chosen in Settings). Colours are CSS variables at the top of [css/styles.css](css/styles.css).
 - **Feel:** playful and game-like, in the spirit of Duolingo: chunky rounded cards, buttons with a "pressable" bottom edge, and the Nunito font.
 - **Plant characters:** [js/plant-art.js](js/plant-art.js) draws a flat, two-tone SVG character for each of the 120 catalogue species. Each one is a plant in a coloured pot with a face, built from shared shapes (leaf, heart, frond, strap, cactus) plus a short recipe per species. There are no image files, so they stay sharp at any size and work offline. The face follows watering status: **happy** when fine, **expectant** when due, and **thirsty** when overdue (faded and drooping, with worried brows and a sweat drop). Plants without a type get a generic leafy plant. To add a species, add a catalogue entry and a recipe in `R`.
 

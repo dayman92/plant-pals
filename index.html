@@ -4,6 +4,24 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#F28C28">
+  <!-- Tells Chrome (incl. Android's "dark theme for sites") that we handle dark mode ourselves,
+       so it must not auto-darken/invert the page and plant drawings. -->
+  <meta name="color-scheme" content="light dark">
+  <script>
+    // Apply the theme before first paint. Setting: 'auto' (follow phone) | 'light' | 'dark'.
+    (function () {
+      var pref = 'auto';
+      try { pref = localStorage.getItem('plantPals.theme') || 'auto'; } catch (e) {}
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      function apply() { document.documentElement.setAttribute('data-theme', pref === 'auto' ? (mq.matches ? 'dark' : 'light') : pref); }
+      apply();
+      if (mq.addEventListener) mq.addEventListener('change', function () { if (pref === 'auto') apply(); });
+      window.PlantTheme = {
+        get: function () { return pref; },
+        set: function (v) { pref = v; try { localStorage.setItem('plantPals.theme', v); } catch (e) {} apply(); },
+      };
+    })();
+  </script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Plant Pals</title>
@@ -30,6 +48,7 @@
       <button class="tab is-active" data-tab="today"><span class="tab-icon"><span class="tab-emoji">💧</span><span id="today-badge" class="badge" hidden></span></span>Today</button>
       <button class="tab" data-tab="plants"><span class="tab-icon"><span class="tab-emoji">🪴</span></span>My plants</button>
       <button class="tab" data-tab="rooms"><span class="tab-icon"><span class="tab-emoji">🏠</span></span>Rooms</button>
+      <button class="tab" data-tab="settings"><span class="tab-icon"><span class="tab-emoji">⚙️</span></span>Settings</button>
     </nav>
   </div>
 

@@ -67,9 +67,10 @@
   // ---------- rendering ----------
   function render() {
     document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('is-active', b.dataset.tab === state.tab));
-    $('#fab').hidden = state.tab === 'today';
+    $('#fab').hidden = state.tab === 'today' || state.tab === 'settings';
     if (state.tab === 'today') renderToday();
     else if (state.tab === 'plants') renderPlants();
+    else if (state.tab === 'settings') renderSettings();
     else renderRooms();
     updateTabBadge();
   }
@@ -562,27 +563,72 @@
         </li>`;
     }).join('');
 
+    $('#screen').innerHTML = rooms.length
+      ? `<ul class="room-list">${cards}</ul>`
+      : '<p class="empty big">No rooms yet. Tap ＋ to create one.</p>';
+  }
+
+  // ----- Settings -----
+  function renderSettings() {
+    $('#screen-title').textContent = 'Settings';
+    $('#screen-subtitle').textContent = 'Plant Pals';
+    const season = W.seasonInfo();
+    const auto = Store.seasonMode() === 'auto';
+    const h = Store.holiday();
+    const b = Store.backupInfo();
+    const lastSnap = b.snapshots[0];
+    const theme = window.PlantTheme ? PlantTheme.get() : 'auto';
+    const row = (id, emoji, title, sub, extra = '<span class="chev" aria-hidden="true">›</span>') => `
+      <button class="settings-row" id="${id}">
+        <span class="season-emoji">${emoji}</span>
+        <span class="season-text"><strong>${title}</strong><span>${sub}</span></span>
+        ${extra}
+      </button>`;
+
     $('#screen').innerHTML = `
-      ${rooms.length ? `<ul class="room-list">${cards}</ul>` : `<p class="empty big">No rooms yet. Tap ＋ to create one.</p>`}
-      <section class="data-panel">
-        <h2>Your data</h2>
-        <p class="muted">Everything is stored on this device only. Uninstalling the app or clearing browser data wipes it, so keep a backup file somewhere safe.</p>
-        ${(() => {
-          const b = Store.backupInfo();
-          const lastSnap = b.snapshots[0];
-          return `<ul class="backup-facts">
-            <li>💾 Backup file: <strong>${b.lastFile ? esc(W.friendly(b.lastFile)) : 'never saved'}</strong> · we’ll remind you every 30 days</li>
-            <li>🗓️ Auto-saved snapshots: <strong>${b.snapshots.length ? `${b.snapshots.length} (latest ${esc(W.friendly(lastSnap.date))})` : 'none yet'}</strong>
-              ${b.snapshots.length ? '<button class="link-btn" id="snapshots-btn">Restore…</button>' : ''}</li>
-          </ul>`;
-        })()}
-        <div class="row">
-          <button class="btn btn-secondary" id="export-btn">Export backup</button>
-          <button class="btn btn-ghost" id="import-btn">Import backup</button>
-          <button class="btn btn-ghost btn-danger-text" id="clear-btn" ${Store.plants().length ? '' : 'disabled'}>Clear all plants</button>
+      <section class="settings-group">
+        <h2>Watering</h2>
+        ${row('set-season', season.emoji, 'Watering schedule', `${esc(season.name)} · ${auto ? 'automatic' : 'set manually'}`)}
+        ${row('set-holiday', '🏖️', 'Holiday mode', h ? `On · ${esc(W.friendly(h.start))} → ${esc(W.friendly(h.end))}` : 'Off · make a plan for your plant-sitter')}
+      </section>
+
+      <section class="settings-group">
+        <h2>Appearance</h2>
+        <div class="settings-card">
+          <span class="settings-label">Theme</span>
+          <div class="segmented" id="theme-choice">
+            ${[['auto', 'Automatic'], ['light', 'Light'], ['dark', 'Dark']].map(([k, label]) =>
+              `<button type="button" data-theme-choice="${k}" class="${theme === k ? 'is-active' : ''}">${label}</button>`).join('')}
+          </div>
+          <p class="muted small">Automatic follows your phone’s dark mode setting.</p>
         </div>
       </section>
-    `;
+
+      <section class="settings-group">
+        <h2>Your data</h2>
+        <div class="settings-card">
+          <p class="muted small">Everything is stored on this device only. Uninstalling the app or clearing browser data wipes it, so keep a backup file somewhere safe.</p>
+          <ul class="backup-facts">
+            <li>💾 Backup file: <strong>${b.lastFile ? esc(W.friendly(b.lastFile)) : 'never saved'}</strong> · we’ll remind you every 30 days</li>
+            <li>🗓️ Auto-saved snapshots: <strong>${b.snapshots.length ? `${b.snapshots.length} (latest ${esc(W.friendly(lastSnap.date))})` : 'none yet'}</strong></li>
+          </ul>
+          <div class="settings-buttons">
+            <button class="btn btn-secondary" id="export-btn">💾 Export backup</button>
+            <button class="btn btn-ghost" id="import-btn">📂 Import backup</button>
+            <button class="btn btn-ghost" id="snapshots-btn" ${b.snapshots.length ? '' : 'disabled'}>🗓️ Restore a snapshot</button>
+            <button class="btn btn-ghost btn-danger-text" id="clear-btn" ${Store.plants().length ? '' : 'disabled'}>🗑️ Clear all plants</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="settings-group">
+        <h2>About</h2>
+        <div class="settings-card about">
+          <p><strong>Plant Pals</strong> · ${plural(Store.plants().length, 'plant')} in ${plural(Store.rooms().length, 'room')}</p>
+          <p class="muted small">Works offline. No account, no tracking — your plants never leave this device unless you export them.</p>
+          <p class="small"><a href="https://github.com/dayman92/plant-pals" target="_blank" rel="noopener">Source code on GitHub</a></p>
+        </div>
+      </section>`;
   }
 
   // ---------- bottom sheet ----------
@@ -898,7 +944,9 @@
     if (t.dataset.roomView) { state.tab = 'plants'; state.roomFilter = t.dataset.roomView; render(); window.scrollTo(0, 0); return; }
     if (t.hasAttribute('data-close')) { closeSheet(); return; }
     if (t.id === 'fab') { if (state.tab === 'plants') openPicker(); else openRoomForm(); return; }
-    if (t.id === 'season-btn') { openSeasonPicker(); return; }
+    if (t.id === 'season-btn' || t.id === 'set-season') { openSeasonPicker(); return; }
+    if (t.id === 'set-holiday') { if (Store.holiday()) openHolidayPlan(); else openHolidayForm(); return; }
+    if (t.dataset.themeChoice) { PlantTheme.set(t.dataset.themeChoice); render(); return; }
     if (t.id === 'export-btn') { exportBackup(); return; }
     if (t.id === 'import-btn') { $('#import-file').click(); return; }
     if (t.id === 'backup-now') { exportBackup(); return; }

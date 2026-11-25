@@ -808,7 +808,8 @@
 
   const INK = '#3B2414';
   function face(mood) {
-    const eye = (x, y) => dot(x, y, 2.7, INK) + dot(x + 0.9, y - 1, 0.95, '#FFFFFF');
+    // White "googly" eye + dark pupil: readable on every pot colour and in dark mode.
+    const eye = (x, y) => ell(x, y, 3.4, 3.7, '#FFFFFF') + dot(x + 0.3, y + 0.4, 2.3, INK) + dot(x + 1.1, y - 0.6, 0.8, '#FFFFFF');
     const blush = ell(38.6, 82.2, 2.7, 1.6, '#FF7A7A', 0) .replace('/>', ' opacity=".45"/>')
       + ell(61.4, 82.2, 2.7, 1.6, '#FF7A7A', 0).replace('/>', ' opacity=".45"/>');
     if (mood === 'thirsty') {
