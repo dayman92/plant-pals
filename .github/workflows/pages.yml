@@ -1,4 +1,4 @@
-# Publishes the app to GitHub Pages on every push to main.
+# Publishes the app to GitHub Pages on every push to main (and on manual "Run workflow").
 name: Deploy to GitHub Pages
 
 on:
