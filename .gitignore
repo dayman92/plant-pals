@@ -1,0 +1,11 @@
+# Personal data never goes in the repo (it's public)
+*.xlsx
+~$*
+plant-pals-backup-*.json
+plant-pals-import*.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+__pycache__/
