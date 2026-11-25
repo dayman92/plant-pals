@@ -403,3 +403,62 @@ button { cursor: pointer; }
 .hero-actions { margin-top: 12px; }
 .btn-danger-text { color: var(--danger); }
 .btn:disabled { opacity: 0.45; cursor: default; transform: none; }
+
+/* ---------- backup reminder & data panel ---------- */
+.backup-banner {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 12px; padding: 8px 10px 8px 12px;
+  background: var(--surface); border: 2px dashed var(--orange); border-radius: 16px;
+}
+.btn-small { padding: 8px 12px; font-size: 0.78rem; }
+.backup-facts { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; font-size: 0.85rem; font-weight: 700; }
+.backup-facts .link-btn { font-size: 0.85rem; padding: 0 4px; }
+
+/* ---------- holiday mode ---------- */
+.holiday-row, .holiday-card {
+  width: 100%; margin-bottom: 12px; border-radius: 16px; border: 2px solid var(--border); background: var(--surface);
+}
+.holiday-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; text-align: left; }
+.holiday-card { padding: 12px; background: linear-gradient(135deg, #E3F4F7, var(--surface)); border-color: #B9DFE6; box-shadow: 0 3px 0 #B9DFE6; }
+.holiday-top { display: flex; align-items: center; gap: 10px; }
+.holiday-next { margin: 10px 0 0; font-weight: 700; font-size: 0.9rem; }
+.holiday-card .row { margin-top: 10px; }
+.switch {
+  flex: none; position: relative; width: 46px; height: 28px; border-radius: 999px; border: none; padding: 0;
+  background: var(--border); transition: background 0.2s;
+}
+.switch::after {
+  content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15); transition: transform 0.2s;
+}
+.switch.is-on { background: #3BB0C4; }
+.switch.is-on::after { transform: translateX(18px); }
+.segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 4px; }
+.segmented button, .day-chips button {
+  padding: 9px 4px; border-radius: 12px; border: 2px solid var(--border); background: var(--surface);
+  font-weight: 800; box-shadow: 0 2px 0 var(--border);
+}
+.segmented button.is-active, .day-chips button.is-active { background: var(--orange); border-color: var(--orange-dark); color: #fff; box-shadow: 0 2px 0 var(--orange-dark); }
+.day-chips { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 4px; }
+.holiday-summary { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--rain); color: var(--rain-text); font-weight: 800; font-size: 0.85rem; }
+.holiday-summary.warn { background: var(--due); color: var(--due-text); }
+
+.sheet-actions { margin-bottom: 8px; }
+.plan-stop { margin-top: 16px; padding-top: 12px; border-top: 2px dashed var(--border); }
+.plan-stop h3 { margin: 0 0 6px; font-size: 1.05rem; font-weight: 900; }
+.plan-stop.you h3 { color: var(--orange-dark); }
+.plan-room { margin: 10px 0 6px; font-size: 0.85rem; font-weight: 900; color: var(--text-muted); }
+.plan-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.plan-list li { display: flex; gap: 10px; align-items: flex-start; }
+.avatar-sm { width: 44px; height: 44px; }
+
+@media (prefers-color-scheme: dark) {
+  .holiday-card { background: linear-gradient(135deg, #16343A, var(--surface)); border-color: #2C5A63; box-shadow: 0 3px 0 #2C5A63; }
+}
+
+/* ---------- print (sitter's plan → paper / PDF) ---------- */
+@media print {
+  body { background: #fff; color: #000; }
+  .app, .sheet-backdrop, .toast, .sheet-handle, .sheet-actions, .sheet .sheet-intro + .row { display: none !important; }
+  .sheet { position: static; transform: none !important; max-height: none; overflow: visible; box-shadow: none; padding: 0; background: #fff; }
+  .plan-stop { break-inside: avoid; }
+}

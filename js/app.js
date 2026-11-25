@@ -21,6 +21,11 @@
   }
   function hash(s) { let h = 0; for (const ch of s) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return h; }
   function plural(n, word) { return `${n} ${word}${n === 1 ? '' : 's'}`; }
+  /** Mid-sentence date: "today" / "tomorrow" / "yesterday", otherwise "on Fri 4 Dec". */
+  function when(iso) {
+    const f = W.friendly(iso);
+    return ['Today', 'Tomorrow', 'Yesterday'].includes(f) ? f.toLowerCase() : `on ${f}`;
+  }
 
   function formatFreq(min, max) {
     if (!min && !max) return '';
@@ -117,7 +122,7 @@
           <div>
             <h2>${total ? 'All watered! 🎉' : 'Nothing to water today'}</h2>
             <p>${total ? `${plural(wateredToday.length, 'plant')} had a drink today.` : 'Everyone’s happy.'}
-            ${nextUp ? `Next up: <strong>${esc(nextUp.p.name)}</strong> ${esc(W.friendly(nextUp.p.nextDue).toLowerCase())}.` : ''}</p>
+            ${nextUp ? `Next up: <strong>${esc(nextUp.p.name)}</strong> ${esc(when(nextUp.p.nextDue))}.` : ''}</p>
           </div>
         </div>`;
     } else {
@@ -148,7 +153,7 @@
         <ul class="water-list">${wateredToday.map((p) => `
           <li class="water-row is-done">
             <button class="row-main" data-plant="${esc(p.id)}">${avatarHtml(p, { mood: 'happy' })}
-              <span class="row-text"><span class="plant-name">${esc(p.name)}</span><span class="row-sub">${esc(roomLabel(p))} · next ${esc(W.friendly(p.nextDue).toLowerCase())}</span></span>
+              <span class="row-text"><span class="plant-name">${esc(p.name)}</span><span class="row-sub">${esc(roomLabel(p))} · next due ${esc(when(p.nextDue))}</span></span>
             </button>
             <span class="tick" aria-label="Watered">✓</span>
           </li>`).join('')}</ul>
@@ -168,7 +173,7 @@
           </div>`).join('')}
       </section>` : '';
 
-    $('#screen').innerHTML = seasonBanner() + hero
+    $('#screen').innerHTML = seasonBanner() + backupBanner() + (plants.length ? holidayCard() : '') + hero
       + section('Overdue', 'overdue', overdue, true)
       + section('Due now', 'due', due, true)
       + doneList + upcomingHtml;
@@ -216,6 +221,238 @@
         Store.setSeasonMode(b.dataset.season);
         closeSheet();
         toast(`${W.seasonInfo().emoji} ${W.seasonInfo().name} schedule${b.dataset.season === 'auto' ? ' (automatic)' : ''}`);
+      });
+    });
+  }
+
+  // ---------- monthly backup reminder ----------
+  function backupBanner() {
+    const b = Store.backupInfo();
+    if (!b.due) return '';
+    return `
+      <div class="backup-banner" role="status">
+        <span class="season-emoji">💾</span>
+        <span class="season-text"><strong>Monthly backup time</strong>
+          <span>${b.lastFile ? `Last backup file saved ${esc(when(b.lastFile))}` : 'You haven’t saved a backup file yet'}</span></span>
+        <button class="btn btn-secondary btn-small" id="backup-now">Save</button>
+        <button class="link-btn" id="backup-later">Later</button>
+      </div>`;
+  }
+
+  // ---------- holiday mode ----------
+  const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Mon..Sun
+  const DEFAULT_DAYS = { 1: [6], 2: [3, 6], 3: [1, 3, 5] };
+  const dayList = (days) => WEEK_ORDER.filter((d) => days.includes(d)).map((d) => W.WEEKDAYS[d]).join(', ');
+  const firstSentence = (text) => (String(text || '').split(/(?<=[.!?])\s+/)[0] || '').trim();
+
+  function holidayCard() {
+    const h = Store.holiday();
+    const today = W.today();
+    if (!h) {
+      return `
+        <button class="holiday-row" id="holiday-on" role="switch" aria-checked="false">
+          <span class="season-emoji">🏖️</span>
+          <span class="season-text"><strong>Holiday mode</strong><span>Going away? Make a watering plan for your plant-sitter</span></span>
+          <span class="switch" aria-hidden="true"></span>
+        </button>`;
+    }
+    if (W.diffDays(h.end, today) >= 0) {
+      return `
+        <div class="holiday-card">
+          <div class="holiday-top"><span class="season-emoji">🏡</span>
+            <span class="season-text"><strong>Welcome back!</strong><span>Did your plant-sitter follow the plan? We can add their visits to each plant’s watering history.</span></span></div>
+          <div class="row"><button class="btn btn-primary" id="holiday-apply">Yes, update plants</button><button class="btn btn-ghost" id="holiday-skip">No, skip</button></div>
+        </div>`;
+    }
+    const plan = Store.holidayPlan();
+    const visits = plan.stops.filter((s) => s.who === 'sitter').length;
+    const nextStop = plan.stops.find((s) => W.diffDays(today, s.date) >= 0);
+    let next = '';
+    if (nextStop) {
+      const label = nextStop.who === 'you' ? `Before you go (${W.friendly(nextStop.date)})` : `Next visit ${when(nextStop.date)}`;
+      next = `${label}: <strong>${nextStop.items.length ? plural(nextStop.items.length, 'plant') + ' to water' : 'nothing needs water'}</strong>`;
+    }
+    const away = W.diffDays(h.start, today) >= 0;
+    return `
+      <div class="holiday-card">
+        <div class="holiday-top">
+          <span class="season-emoji">🏖️</span>
+          <span class="season-text"><strong>Holiday mode${away ? ' · you’re away' : ''}</strong>
+            <span>${esc(W.friendly(h.start))} → back ${esc(W.friendly(h.end))} · ${plural(visits, 'visit')} (${esc(dayList(h.days))})</span></span>
+          <button class="switch is-on" id="holiday-off" role="switch" aria-checked="true" aria-label="Turn off holiday mode"></button>
+        </div>
+        ${next ? `<p class="holiday-next">${next}</p>` : ''}
+        <div class="row"><button class="btn btn-primary" id="holiday-plan">📋 Sitter’s plan</button><button class="btn btn-ghost" id="holiday-edit">Edit</button></div>
+      </div>`;
+  }
+
+  function openHolidayForm() {
+    const today = W.today();
+    const h = Store.holiday() || { start: today, end: W.addDays(today, 7), days: DEFAULT_DAYS[2] };
+    let days = [...h.days];
+    const editing = !!Store.holiday();
+
+    openSheet(editing ? 'Edit holiday' : 'Holiday mode', `
+      <p class="muted sheet-intro">Tell us when you’re away and when someone can pop round. We’ll work out exactly which plants they need to water on each visit.</p>
+      <form id="holiday-form" class="form">
+        <div class="two-col">
+          <label>Going away<input name="start" type="date" required value="${esc(h.start)}"></label>
+          <label>Back home<input name="end" type="date" required value="${esc(h.end)}"></label>
+        </div>
+        <fieldset>
+          <legend>Visits per week</legend>
+          <div class="segmented" id="visit-count">
+            ${[1, 2, 3].map((n) => `<button type="button" data-count="${n}">${n === 1 ? 'Once' : n === 2 ? 'Twice' : '3 times'}</button>`).join('')}
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>On these days</legend>
+          <div class="day-chips" id="day-chips">
+            ${WEEK_ORDER.map((d) => `<button type="button" data-day="${d}">${W.WEEKDAYS[d].slice(0, 2)}</button>`).join('')}
+          </div>
+        </fieldset>
+        <p class="holiday-summary" id="holiday-summary"></p>
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" data-close>Cancel</button>
+          <button type="submit" class="btn btn-primary">${editing ? 'Save' : 'Turn on'}</button>
+        </div>
+      </form>`, (body) => {
+      const form = $('#holiday-form', body);
+      const update = () => {
+        body.querySelectorAll('[data-day]').forEach((b) => b.classList.toggle('is-active', days.includes(+b.dataset.day)));
+        body.querySelectorAll('[data-count]').forEach((b) => b.classList.toggle('is-active', +b.dataset.count === days.length));
+        const summary = $('#holiday-summary', body);
+        const start = form.start.value, end = form.end.value;
+        if (!start || !end || W.diffDays(start, end) < 1) { summary.textContent = 'Your return date needs to be after the day you leave.'; summary.className = 'holiday-summary warn'; return; }
+        const visits = W.holidayVisits({ start, end, days });
+        summary.className = 'holiday-summary' + (visits.length ? '' : ' warn');
+        summary.textContent = visits.length
+          ? `${plural(visits.length, 'visit')}: ${visits.map((d) => W.friendly(d)).join(', ')}`
+          : (days.length ? 'No visits fall between those dates — pick other days, or plants will just get your pre-trip watering.' : 'Pick at least one day for visits.');
+      };
+      body.addEventListener('click', (e) => {
+        const c = e.target.closest('[data-count]'), d = e.target.closest('[data-day]');
+        if (c) { e.stopPropagation(); days = [...DEFAULT_DAYS[c.dataset.count]]; update(); }
+        if (d) { e.stopPropagation(); const n = +d.dataset.day; days = days.includes(n) ? days.filter((x) => x !== n) : [...days, n]; update(); }
+      });
+      form.start.addEventListener('change', update);
+      form.end.addEventListener('change', update);
+      update();
+      form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (W.diffDays(form.start.value, form.end.value) < 1) { form.end.focus(); return; }
+        Store.setHoliday({ start: form.start.value, end: form.end.value, days: WEEK_ORDER.filter((d) => days.includes(d)) });
+        closeSheet();
+        toast(editing ? 'Holiday plan updated' : '🏖️ Holiday mode on');
+      });
+    });
+  }
+
+  function planText(plan, h) {
+    const lines = [`🪴 Plant-sitting plan`, `${W.friendly(h.start)} → ${W.friendly(h.end)}`, ''];
+    let n = 0;
+    plan.stops.forEach((stop) => {
+      if (stop.who === 'you') return;
+      n += 1;
+      lines.push(`📅 Visit ${n} — ${W.friendly(stop.date)}`);
+      if (!stop.items.length) lines.push('Nothing needs water today — just check nothing looks droopy.');
+      groupByRoom(stop.items).forEach(([room, items]) => {
+        lines.push(`${room}:`);
+        items.forEach(({ plant: p, tight }) => {
+          const bits = [p.placement, p.waterType && (/rain/i.test(p.waterType) ? `${p.waterType} 🌧️` : p.waterType)].filter(Boolean).join(' · ');
+          lines.push(`• ${p.name}${bits ? ` (${bits})` : ''}${tight ? ' — give it a thorough soak' : ''}`);
+          const tip = firstSentence(p.notes);
+          if (tip) lines.push(`   ${tip}`);
+        });
+      });
+      lines.push('');
+    });
+    if (plan.idle.length) lines.push(`No water needed while I’m away: ${plan.idle.map((p) => p.name).join(', ')}.`, '');
+    lines.push('Thank you! 💚');
+    return lines.join('\n');
+  }
+
+  function groupByRoom(items) {
+    const groups = new Map();
+    items.forEach((it) => {
+      const room = Store.room(it.plant.roomId);
+      const key = room ? `${room.emoji} ${room.name}` : 'Other';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(it);
+    });
+    return [...groups.entries()];
+  }
+
+  function openHolidayPlan() {
+    const h = Store.holiday();
+    const plan = Store.holidayPlan();
+    let visitNo = 0;
+    const stopsHtml = plan.stops.map((stop) => {
+      const title = stop.who === 'you' ? `Before you go · ${W.friendly(stop.date)}` : `Visit ${++visitNo} · ${W.friendly(stop.date)}`;
+      const body = stop.items.length
+        ? groupByRoom(stop.items).map(([room, items]) => `
+            <h4 class="plan-room">${esc(room)}</h4>
+            <ul class="plan-list">${items.map(({ plant: p, tight }) => `
+              <li>
+                ${avatarHtml(p, { size: 'avatar-sm', mood: 'happy' })}
+                <span class="row-text">
+                  <span class="plant-name">${esc(p.name)}</span>
+                  <span class="row-sub">${p.placement ? `📍 ${esc(p.placement)}` : ''}</span>
+                  <span class="pills">${waterPill(p)}${tight ? '<span class="pill s-due">Give a thorough soak</span>' : ''}</span>
+                  ${firstSentence(p.notes) ? `<span class="row-hint">${esc(firstSentence(p.notes))}</span>` : ''}
+                </span>
+              </li>`).join('')}</ul>`).join('')
+        : '<p class="muted small">Nothing needs water — just check nothing looks droopy.</p>';
+      return `<section class="plan-stop ${stop.who}"><h3>${esc(title)} <span class="muted">${stop.items.length || ''}</span></h3>${body}</section>`;
+    }).join('');
+
+    openSheet('Sitter’s plan', `
+      <p class="muted sheet-intro">${esc(W.friendly(h.start))} → back ${esc(W.friendly(h.end))}. Share this with whoever’s watering — it works without the app.</p>
+      <div class="row sheet-actions">
+        <button class="btn btn-primary" id="plan-share">Share</button>
+        <button class="btn btn-ghost" id="plan-copy">Copy text</button>
+        <button class="btn btn-ghost" id="plan-print">Print / PDF</button>
+      </div>
+      ${stopsHtml}
+      ${plan.idle.length ? `<section class="plan-stop"><h3>No water needed while you’re away</h3><p class="muted small">${esc(plan.idle.map((p) => p.name).join(', '))}</p></section>` : ''}`, (body) => {
+      const text = planText(plan, h);
+      body.addEventListener('click', async (e) => {
+        const b = e.target.closest('button');
+        if (!b) return;
+        if (b.id === 'plan-share') {
+          e.stopPropagation();
+          if (navigator.share) { try { await navigator.share({ title: 'Plant-sitting plan', text }); } catch (err) { /* cancelled */ } }
+          else { copyText(text); }
+        }
+        if (b.id === 'plan-copy') { e.stopPropagation(); copyText(text); }
+        if (b.id === 'plan-print') { e.stopPropagation(); window.print(); }
+      });
+    });
+  }
+
+  async function copyText(text) {
+    try { await navigator.clipboard.writeText(text); toast('Plan copied — paste it into a message'); }
+    catch (e) { prompt('Copy the plan:', text); }
+  }
+
+  function openSnapshots() {
+    const snaps = Store.backupInfo().snapshots;
+    const label = (r) => (r === 'auto' ? 'Monthly auto-save' : r === 'before clearing' ? 'Saved before “Clear all plants”' : r === 'before import' ? 'Saved before an import' : r);
+    openSheet('Restore a snapshot', `
+      <p class="muted sheet-intro">The app saves a copy of your plants automatically every 30 days, and before you clear or import. Snapshots live on this device only — export a backup file to be safe if you uninstall.</p>
+      <div class="season-options">${snaps.map((s, i) => `
+        <button class="season-option" data-snap="${i}">
+          <span class="season-emoji">${s.reason === 'auto' ? '🗓️' : '🛟'}</span>
+          <span class="season-text"><strong>${esc(W.friendly(s.date))}</strong><span>${esc(label(s.reason))} · ${plural(s.plants, 'plant')}</span></span>
+        </button>`).join('')}</div>`, (body) => {
+      body.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-snap]');
+        if (!b) return;
+        e.stopPropagation();
+        const s = snaps[+b.dataset.snap];
+        if (!confirm(`Replace your current plants with the snapshot from ${W.friendly(s.date)} (${plural(s.plants, 'plant')})?`)) return;
+        try { const r = Store.restoreSnapshot(+b.dataset.snap); closeSheet(); toast(`Restored ${plural(r.plants, 'plant')}`); }
+        catch (err) { alert(err.message); }
       });
     });
   }
@@ -329,7 +566,16 @@
       ${rooms.length ? `<ul class="room-list">${cards}</ul>` : `<p class="empty big">No rooms yet. Tap ＋ to create one.</p>`}
       <section class="data-panel">
         <h2>Your data</h2>
-        <p class="muted">Everything is stored on this device only. Export a backup now and then — uninstalling the app or clearing browser data wipes it.</p>
+        <p class="muted">Everything is stored on this device only. Uninstalling the app or clearing browser data wipes it, so keep a backup file somewhere safe.</p>
+        ${(() => {
+          const b = Store.backupInfo();
+          const lastSnap = b.snapshots[0];
+          return `<ul class="backup-facts">
+            <li>💾 Backup file: <strong>${b.lastFile ? esc(W.friendly(b.lastFile)) : 'never saved'}</strong> · we’ll remind you every 30 days</li>
+            <li>🗓️ Auto-saved snapshots: <strong>${b.snapshots.length ? `${b.snapshots.length} (latest ${esc(W.friendly(lastSnap.date))})` : 'none yet'}</strong>
+              ${b.snapshots.length ? '<button class="link-btn" id="snapshots-btn">Restore…</button>' : ''}</li>
+          </ul>`;
+        })()}
         <div class="row">
           <button class="btn btn-secondary" id="export-btn">Export backup</button>
           <button class="btn btn-ghost" id="import-btn">Import backup</button>
@@ -450,7 +696,7 @@
         <div class="form-hero">
           <span id="form-avatar">${avatarHtml(p, { size: 'avatar-lg' })}</span>
           <div class="form-hero-text">
-            ${existing ? `${statusPill(p)}<span class="muted small">${p.lastWatered ? `Last watered ${esc(W.friendly(p.lastWatered).toLowerCase())}` : 'Not watered in the app yet'}</span>
+            ${existing ? `${statusPill(p)}<span class="muted small">${p.lastWatered ? `Last watered ${esc(when(p.lastWatered))}` : 'Not watered in the app yet'}</span>
               <button type="button" class="btn btn-water" id="water-now">💧 Watered today</button>`
               : `<span class="muted">${p.species ? 'Fill in the details, then save.' : 'Pick a plant type below to get its picture.'}</span>`}
           </div>
@@ -655,6 +901,17 @@
     if (t.id === 'season-btn') { openSeasonPicker(); return; }
     if (t.id === 'export-btn') { exportBackup(); return; }
     if (t.id === 'import-btn') { $('#import-file').click(); return; }
+    if (t.id === 'backup-now') { exportBackup(); return; }
+    if (t.id === 'backup-later') { Store.snoozeBackup(7); toast('We’ll remind you again in a week'); return; }
+    if (t.id === 'snapshots-btn') { openSnapshots(); return; }
+    if (t.id === 'holiday-on' || t.id === 'holiday-edit') { openHolidayForm(); return; }
+    if (t.id === 'holiday-plan') { openHolidayPlan(); return; }
+    if (t.id === 'holiday-off') {
+      if (confirm('Turn off holiday mode? Your sitter’s plan will be removed.')) { Store.endHoliday(false); toast('Holiday mode off'); }
+      return;
+    }
+    if (t.id === 'holiday-apply') { Store.endHoliday(true); toast('Sitter’s visits added to your plants 💧'); return; }
+    if (t.id === 'holiday-skip') { Store.endHoliday(false); toast('Holiday mode off'); return; }
     if (t.id === 'add-first') { state.tab = 'plants'; render(); openPicker(); return; }
     if (t.id === 'clear-btn') {
       const n = Store.plants().length;
@@ -705,6 +962,8 @@
     a.download = `plant-pals-backup-${W.today()}.json`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    Store.markFileBackup();
+    toast('Backup saved to your Downloads 💾');
   }
 
   Store.subscribe(render);

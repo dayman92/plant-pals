@@ -17,6 +17,9 @@ The app is plain **HTML + CSS + JavaScript with no build step and no dependencie
   - **Export backup** downloads everything as JSON. This matters because clearing browser data wipes the plants.
   - **Import backup** loads an export back in, replacing the current plants and rooms. It's also how to move plants from one device to another.
   - **Clear all plants** deletes every plant and its history. Rooms and settings are kept.
+- **Monthly backups.** Web apps can't save files silently, so backups come in two kinds:
+  - **Automatic snapshots:** every 30 days, and before *Clear all plants* or an import, the app saves a copy of your plants inside its own storage (up to 3 monthly + 3 safety copies). *Restore…* in the data panel brings one back. These protect against mistakes, but not against uninstalling.
+  - **Backup file reminder:** 30 days after the last backup file (or after first use), Today shows a "Monthly backup time" banner. *Save* downloads the file (on Android it goes to Downloads); *Later* snoozes it for a week.
 - Import also accepts a prepared file with a 4-week rota. If the file has a `scheduleStart` date and per-plant `scheduleDays` (day numbers 1–28 of a repeating cycle), each plant's first due date is set to its next rota day. That way an existing schedule carries straight over instead of every plant being due at once.
 
 #### Data model
@@ -58,6 +61,15 @@ A few plants have explicit ranges instead because their year runs differently. L
 A **new plant** starts with today as its last watering, so it's next due after the current season's minimum interval. **Imported plants** that aren't on a rota and have never been watered are first due at today plus their minimum interval. After the first watering in the app, each plant follows its own interval.
 
 All catalogue frequencies are general rules of thumb from common houseplant care guidance, not measured values. Adjust any plant that seems too wet or too dry.
+
+### Holiday mode
+Switch on **Holiday mode** on the Today tab, set the day you leave and the day you're back, and choose how often someone can visit: once, twice or three times a week, on whichever weekdays suit.
+
+The app simulates every plant across the trip ([js/watering.js](js/watering.js) `planHoliday`). At each stop (you on the day you leave, then each visit), a plant gets watered if it's already due, or if it would run past the end of its watering window before the next stop or your return. Seasons are taken into account if the trip crosses a season boundary.
+
+The **Sitter's plan** lists each visit with plants grouped by room, plus where each plant sits, its water type, a one-line care tip, and a "give it a thorough soak" flag when the gap to the next visit is longer than the plant's maximum interval. Plants that need nothing while you're away are listed separately. The plan can be **shared** (WhatsApp, email and so on via Android's share sheet), **copied** as text, or **printed / saved as a PDF**. The person watering doesn't need the app.
+
+Each plant's due date is frozen when holiday mode is switched on, so the plan you shared doesn't shift mid-trip. Watering in the app before you leave updates the plan. When you're back, Today asks whether the sitter followed the plan; *Yes* adds their visits to each plant's watering history.
 
 ### Plant catalogue
 [js/catalog.js](js/catalog.js) lists 120 common UK houseplants. Each has winter watering defaults, a water type, a one-line care note, and a pattern used to recognise existing plant names. Plants are sorted into everyday groups rather than botanical ones, and each plant is in exactly one group:
@@ -128,4 +140,5 @@ Then visit http://localhost:8000. To get a phone-sized view, use the browser dev
 5. ✅ **Seasons:** spring/summer/autumn/winter ranges per plant, automatic or pinned season, and a banner on Today.
 6. ✅ **Backup import / clear all:** restore or move data with a JSON file; the app ships with no starter data.
 7. **Reminders:** local notifications. This may need a Capacitor wrapper for reliable delivery on iOS.
-8. **Fun extras:** a watering streak, and a short celebration when the day's list is done.
+8. ✅ **Holiday mode** with a shareable sitter's plan; **monthly backup** reminders and automatic snapshots.
+9. **Fun extras:** a watering streak, and a short celebration when the day's list is done.

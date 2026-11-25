@@ -97,8 +97,54 @@
     return dt.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   }
 
+  // ----- holiday planning -----
+  const weekday = (iso) => parse(iso).getDay(); // 0 = Sunday
+
+  /** Sitter visit dates: chosen weekdays strictly between leaving and coming back. */
+  function holidayVisits(h) {
+    const out = [];
+    for (let d = addDays(h.start, 1); diffDays(d, h.end) > 0; d = addDays(d, 1)) {
+      if (h.days.includes(weekday(d))) out.push(d);
+    }
+    return out;
+  }
+
+  /**
+   * Simulate the trip. Stops are: you (on the day you leave), then each sitter visit.
+   * At each stop a plant is watered if it's already due, or if it would go past the
+   * end of its watering window before the next stop (or before you get back).
+   * seasonOn(iso) -> season key, so long trips can cross a season boundary.
+   * Returns { stops: [{date, who, items:[{plant, early, tight}]}], idle: [plants never watered] }.
+   */
+  function planHoliday(plants, h, seasonOn) {
+    const stops = [{ date: h.start, who: 'you' }, ...holidayVisits(h).map((date) => ({ date, who: 'sitter' }))]
+      .map((s) => ({ ...s, items: [] }));
+    // Due dates are frozen when holiday mode is set up (h.baseline), so the plan the sitter
+    // was given stays the same even if the season re-bases due dates mid-trip.
+    const base = h.baseline || {};
+    const next = new Map(plants.map((p) => [p.id, base[p.id] || p.nextDue || h.start]));
+    stops.forEach((stop, i) => {
+      const following = i + 1 < stops.length ? stops[i + 1].date : h.end;
+      const gap = diffDays(stop.date, following);
+      plants.forEach((p) => {
+        const iv = interval(p, seasonOn(stop.date));
+        const due = next.get(p.id);
+        const lastOkDay = addDays(due, iv.max - iv.min);
+        if (diffDays(stop.date, due) <= 0 || diffDays(lastOkDay, following) > 0) {
+          stop.items.push({ plant: p, early: diffDays(stop.date, due) > 0, tight: gap > iv.max });
+          next.set(p.id, addDays(stop.date, iv.min));
+        }
+      });
+    });
+    const watered = new Set(stops.flatMap((s) => s.items.map((it) => it.plant.id)));
+    return { stops, idle: plants.filter((p) => !watered.has(p.id)) };
+  }
+
+  const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
   window.Watering = {
     today, addDays, diffDays, interval, dueAfter, status, nextFromRota, friendly, longDate,
+    holidayVisits, planHoliday, weekday, WEEKDAYS,
     SEASONS, seasonForDate,
     season() { return activeSeason; },
     seasonInfo(key = activeSeason) { return SEASONS.find((s) => s.key === key); },
