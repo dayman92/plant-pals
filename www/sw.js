@@ -1,12 +1,12 @@
 // Service worker: network-first with cache fallback, so the app works offline
 // once installed but always picks up fresh files when online.
-const CACHE = 'plant-pals-v10';
+const CACHE = 'plant-pals-v11';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './icons/icon.svg',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
   './css/styles.css', './js/catalog.js', './js/watering.js',
   './js/plant-art.js', './js/store.js', './js/native.js', './js/app.js',
-  './fonts/nunito-latin.woff2',
+  './fonts/nunito-latin.woff2', './privacy.html',
 ];
 
 self.addEventListener('install', (e) => {

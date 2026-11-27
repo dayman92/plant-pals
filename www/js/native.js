@@ -121,6 +121,11 @@
     await P.Share.share({ title: 'Plant Pals backup', files: [uri], dialogTitle: 'Save your Plant Pals backup' });
   }
 
+  /** The installed app's version name, e.g. "1.2.0" (app only). */
+  async function appVersion() {
+    try { return isApp && P.App ? (await P.App.getInfo()).version : ''; } catch (e) { return ''; }
+  }
+
   // ----- Android back button -----
   function onBack(handler) {
     if (isApp && P.App) P.App.addListener('backButton', () => { if (!handler()) P.App.exitApp(); });
@@ -133,5 +138,5 @@
     rescheduleSoon();
   }
 
-  window.Native = { isApp, setReminders, reminderSummary, permission: () => (isApp ? permission(false) : Promise.resolve('unavailable')), planReminders, reschedule, shareText, shareBackupFile, onBack };
+  window.Native = { isApp, setReminders, reminderSummary, permission: () => (isApp ? permission(false) : Promise.resolve('unavailable')), planReminders, reschedule, shareText, shareBackupFile, onBack, appVersion };
 })();

@@ -764,7 +764,7 @@
       <section class="settings-group">
         <h2>Your data</h2>
         <div class="settings-card">
-          <p class="muted small">Everything is stored on this device only. Uninstalling the app or clearing browser data wipes it, so keep a backup file somewhere safe.</p>
+          <p class="muted small">Everything is stored on this device only. ${Native.isApp ? 'Uninstalling the app or clearing its storage' : 'Uninstalling the app or clearing browser data'} wipes it, so keep a backup file somewhere safe.</p>
           <ul class="backup-facts">
             <li>💾 Backup file: <strong>${b.lastFile ? esc(W.friendly(b.lastFile)) : 'never saved'}</strong> · we’ll remind you every 30 days</li>
             <li>🗓️ Auto-saved snapshots: <strong>${b.snapshots.length ? `${b.snapshots.length} (latest ${esc(W.friendly(lastSnap.date))})` : 'none yet'}</strong></li>
@@ -783,10 +783,14 @@
         <div class="settings-card about">
           <p><strong>Plant Pals</strong> · ${plural(Store.plants().length, 'plant')} in ${plural(Store.rooms().length, 'room')}</p>
           <p class="muted small">Works offline. No account, no tracking — your plants never leave this device unless you export them.</p>
-          <p class="small"><a href="https://github.com/dayman92/plant-pals" target="_blank" rel="noopener">Source code on GitHub</a></p>
+          <p class="small"><a href="https://dayman92.github.io/plant-pals/privacy.html" target="_blank" rel="noopener">Privacy policy</a> · <a href="https://github.com/dayman92/plant-pals" target="_blank" rel="noopener">Source code on GitHub</a></p>
+          <p class="muted small" id="app-version">${Native.isApp ? '' : 'Web version'}</p>
         </div>
       </section>`;
-    if (Native.isApp) fillReminderStatus(rem);
+    if (Native.isApp) {
+      fillReminderStatus(rem);
+      Native.appVersion().then((v) => { const el = $('#app-version'); if (el && v) el.textContent = `Version ${v}`; });
+    }
   }
 
   async function fillReminderStatus(rem) {

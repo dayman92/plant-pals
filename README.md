@@ -142,7 +142,9 @@ www/                      the app (published to GitHub Pages, bundled into the A
 android/                  Capacitor's Android project (generated, plus our tweaks)
 assets/                   source images for the Android icon and splash screen
 capacitor.config.json     app id, name, notification icon colour
-scripts/build-apk.ps1     builds a signed APK into dist/  (npm run apk)
+scripts/build-apk.ps1     builds a signed APK + Play bundle into dist/  (npm run apk)
+scripts/store-assets.py   regenerates the Play listing images in store/
+store/                    Google Play listing kit (text, answers, images)
 ```
 
 ## Running it
@@ -158,6 +160,9 @@ scripts/build-apk.ps1     builds a signed APK into dist/  (npm run apk)
 - Signing: release builds are signed with a private key kept **outside the repo**. `android/keystore.properties` (gitignored) points at it. **Back up the key**: without it you can't publish updates that install over the existing app.
 - Build: `npm run apk`, which runs `cap sync`, a Gradle release build, and copies the APK to `dist/`.
 - After changing anything in `www/`, rebuild the APK so the app gets the change. The web version updates when pushed.
+
+### Google Play
+[store/README.md](store/README.md) is the listing kit: store text, the answers for each Play Console form, release steps, and the listing images (icon, feature graphic, screenshots). Regenerate the images with `python scripts/store-assets.py`, which uses demo plants, never real data. `npm run apk` also builds the `.aab` bundle that Play needs. The privacy policy is [www/privacy.html](www/privacy.html), published at https://dayman92.github.io/plant-pals/privacy.html and linked from Settings › About.
 
 ### Web app on an Android phone
 The app is an installable web app. Chrome on Android installs it like a normal app, with its own icon in the app drawer, opening full-screen and working offline. Chrome only offers to install over **HTTPS**, so the files need to be hosted somewhere first:
