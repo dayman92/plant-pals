@@ -20,6 +20,7 @@
     if (p.species === undefined) p.species = Catalog.guess(p.name, p.detail);
     if (!p.schedule) p.schedule = Catalog.schedule(p.species, p.minDays, p.maxDays); // old single range = winter
     if (!p.waterMethod) p.waterMethod = Catalog.defaultMethod(p.species);
+    if (!p.light) p.light = Catalog.defaultLight(p.species);
     delete p.minDays; delete p.maxDays; delete p.frequencyLabel;
     if (!Array.isArray(p.history)) p.history = [];
     if (p.lastWatered === undefined) p.lastWatered = null;
@@ -43,6 +44,7 @@
       lastFileBackup: null, backupSnoozeUntil: null,
       holiday: null, // { start, end, days: [weekday numbers 0=Sun] }
       reminders: { on: false, time: '08:00' }, // daily notification (Android app only)
+      showWaterType: true, // show rain/tap water on cards, rows and the sitter's plan
       ...(d.settings || {}),
     };
     Watering.setSeason(effectiveSeason(d));
@@ -169,6 +171,8 @@
     holiday() { return data.settings.holiday; },
     // ----- reminders (used by the Android app) -----
     reminders() { return data.settings.reminders; },
+    showWaterType() { return data.settings.showWaterType !== false; },
+    setShowWaterType(on) { data.settings.showWaterType = !!on; commit(); },
     setReminders(patch) { data.settings.reminders = { ...data.settings.reminders, ...patch }; commit(); },
     /** Turn on / edit holiday mode. Freezes each plant's current due date for the plan. */
     setHoliday(h) {

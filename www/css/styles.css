@@ -498,6 +498,18 @@ button { cursor: pointer; }
 .help-btn:active { transform: translateY(2px); }
 .pill-method { background: #E4F3E1; color: #2E6B3A; }
 :root[data-theme="dark"] .pill-method { background: #20381F; color: #A9DDA4; }
+.pill-light { background: #FFF3CC; color: #7A5300; gap: 4px; }
+:root[data-theme="dark"] .pill-light { background: #3A2E10; color: #F5D47A; }
+.pill .sun-icon { flex: none; vertical-align: -3px; }
+.light-choice { margin-bottom: 6px; }
+.light-choice button { display: flex; flex-direction: column; align-items: center; gap: 2px; padding-top: 8px; padding-bottom: 8px; }
+.light-choice .sun-icon { background: #FFF8E6; border-radius: 50%; padding: 3px; box-sizing: content-box; }
+.label-text { font-weight: 800; font-size: 0.9rem; }
+.light-list { list-style: none; padding: 0; }
+.light-list li { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px; }
+.light-list .sun-icon { flex: none; margin-top: 1px; }
+.reminder-row.switch-only { margin-bottom: 0; }
+.water-type-field[hidden] { display: none; }
 .label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: -6px; }
 .label-row label { font-weight: 800; font-size: 0.9rem; }
 .help-inline {

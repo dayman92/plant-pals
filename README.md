@@ -56,6 +56,12 @@ Each plant has a **watering method**, shown as a pill on plant cards, in the Tod
 
 The plant form shows a one-line "how to" for the chosen method. The **watering guide** opens from the **?** in the top bar, the **?** next to "How to water" and "Water type" in the plant form, Settings → Watering guide, or the sitter's plan. It covers checking before watering, each method (with drawings for top, bottom and soak), rain vs tap water (and why to avoid softened water), and signs of over- or under-watering. It opens as its own layer on top of whatever is open, so it never loses unsaved form edits. The shared sitter's plan also ends with a short "How to water" section for the methods it uses.
 
+### Light
+Each plant shows a small sun drawing for how much light it wants: **full sun** (filled sun: a sunny windowsill), **half sun** (half-filled: bright, out of harsh midday sun) or **shade** (sun behind a cloud: copes with a darker spot). Catalogue species come with a default (`Catalog.defaultLight`), and plants you add yourself start at half sun. You can change it with the three-way picker in the plant form. The watering guide has a "How much light?" section.
+
+### Showing water type
+Settings → Watering → **Show water type** (on by default). When it's off, the rain/tap pills disappear from cards, Today and the sitter's plan, and the field is hidden in the plant form. The stored value is kept, so switching it back on restores everything.
+
 ### Seasons
 Each plant has a separate range for **spring, summer, autumn and winter**. A banner at the top of the Today tab shows which schedule is active, for example "🍂 Autumn schedule · Automatic". Tap it to change:
 - **Automatic** (the default) follows UK meteorological seasons: spring is Mar–May, summer Jun–Aug, autumn Sep–Nov and winter Dec–Feb.

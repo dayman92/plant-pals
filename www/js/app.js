@@ -45,9 +45,30 @@
     return room ? `${room.emoji} ${room.name}` : 'Unassigned';
   }
   function waterPill(p) {
-    if (!p.waterType) return '';
+    if (!p.waterType || !Store.showWaterType()) return '';
     const rain = /rain/i.test(p.waterType);
     return `<span class="pill ${rain ? 'pill-rain' : 'pill-tap'}">${rain ? '🌧️' : '🚰'} ${esc(p.waterType)}</span>`;
+  }
+  /** Small sun drawing: full sun (filled), half sun (half filled), shade (sun behind a cloud). */
+  function sunIcon(level, size = 16) {
+    const rays = [0, 45, 90, 135, 180, 225, 270, 315].map((a) =>
+      `<line x1="12" y1="2.2" x2="12" y2="4.6" transform="rotate(${a} 12 12)"/>`).join('');
+    const sun = '#F2A007';
+    let body;
+    if (level === 'full') {
+      body = `<g stroke="${sun}" stroke-width="2" stroke-linecap="round">${rays}</g><circle cx="12" cy="12" r="5" fill="${sun}"/>`;
+    } else if (level === 'shade') {
+      body = `<g stroke="${sun}" stroke-width="1.8" stroke-linecap="round" opacity=".55">${rays}</g><circle cx="12" cy="12" r="4.4" fill="none" stroke="${sun}" stroke-width="1.8" opacity=".55"/>`
+        + '<path d="M7.5 21.5h10a3.6 3.6 0 0 0 .3-7.2 4.8 4.8 0 0 0-9.2-.6A3.9 3.9 0 0 0 7.5 21.5z" fill="#8FA3B8" stroke="#6E8399" stroke-width="1"/>';
+    } else {
+      body = `<g stroke="${sun}" stroke-width="2" stroke-linecap="round">${rays}</g><circle cx="12" cy="12" r="4.4" fill="none" stroke="${sun}" stroke-width="1.8"/>`
+        + `<path d="M12 7.6a4.4 4.4 0 0 0 0 8.8z" fill="${sun}"/>`;
+    }
+    return `<svg class="sun-icon" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">${body}</svg>`;
+  }
+  function lightPill(p) {
+    const l = Catalog.lightInfo(p.light);
+    return `<span class="pill pill-light" title="${esc(l.how)}">${sunIcon(l.key)} ${esc(l.short)}</span>`;
   }
   function methodPill(p) {
     const m = Catalog.method(p.waterMethod);
@@ -365,7 +386,7 @@
         lines.push(`${room}:`);
         items.forEach(({ plant: p, tight }) => {
           const bits = [p.placement, Catalog.method(p.waterMethod).name.toLowerCase(),
-            p.waterType && (/rain/i.test(p.waterType) ? `${p.waterType} 🌧️` : p.waterType)].filter(Boolean).join(' · ');
+            Store.showWaterType() && p.waterType && (/rain/i.test(p.waterType) ? `${p.waterType} 🌧️` : p.waterType)].filter(Boolean).join(' · ');
           lines.push(`• ${p.name}${bits ? ` (${bits})` : ''}${tight ? ' — give it a thorough soak' : ''}`);
           const tip = firstSentence(p.notes);
           if (tip) lines.push(`   ${tip}`);
@@ -540,6 +561,14 @@
         <p><strong>Tap water</strong> is fine for most tough plants — succulents, cacti, pothos, monstera, ZZ plants. In hard-water areas (much of southern and eastern England) lime builds up as a white crust on soil and pots; flush with a good top watering now and then, or switch sensitive plants to rainwater. Letting tap water stand overnight brings it to room temperature and lets some chlorine escape.</p>
         <p><strong>Also good:</strong> filtered jug water, or boiled and cooled water. Use distilled water for carnivorous plants if you have no rain. <strong>Avoid softened water</strong> from a water softener — the salt in it harms plants.</p>
         <p><strong>Temperature:</strong> always use room-temperature (“tepid”) water — cold water can shock tropical roots and mark leaves.</p>`)}
+      ${sec('light', '☀️ How much light?', `
+        <p>Light decides how fast a plant drinks: a plant in a sunny window dries out much faster than the same plant in a dark corner. Each plant shows one of three suns:</p>
+        <ul class="light-list">
+          ${Catalog.lights.map((l) => `<li>${sunIcon(l.key, 22)}<span><strong>${esc(l.name)}:</strong> ${esc(l.how)}</span></li>`).join('')}
+        </ul>
+        <p><strong>Signs of too little light:</strong> long, stretched stems, small new leaves, plants leaning hard towards the window, and patterned leaves fading to plain green.</p>
+        <p><strong>Signs of too much:</strong> bleached, yellow-white or crispy brown patches on the side facing the window.</p>
+        <p>UK winters are dark, so move plants closer to the window from November to February, and back a little in high summer.</p>`)}
       ${sec('signs', '🩺 Too much or too little?', `
         <p><strong>Overwatered:</strong> yellow, soft lower leaves · mushy stems · compost that never dries · fungus gnats · a musty smell.</p>
         <p><strong>Underwatered:</strong> crispy brown edges · drooping that perks up after a drink · compost shrinking from the pot edge · a very light pot.</p>
@@ -570,7 +599,7 @@
           <span class="row-text">
             <span class="plant-name">${esc(p.name)}</span>
             <span class="row-sub">${esc(roomLabel(p))}${p.placement ? ` · ${esc(p.placement)}` : ''}</span>
-            <span class="pills">${statusPill(p)}${methodPill(p)}${waterPill(p)}</span>
+            <span class="pills">${statusPill(p)}${methodPill(p)}${lightPill(p)}${waterPill(p)}</span>
             ${s.hint && s.kind === 'due' ? `<span class="row-hint">${esc(s.hint)}</span>` : ''}
           </span>
         </button>
@@ -640,6 +669,7 @@
               ${statusPill(p)}
               ${freq ? `<span class="pill pill-freq" title="${esc(W.seasonInfo().name)} schedule">${W.seasonInfo().emoji} ${esc(freq)}</span>` : ''}
               ${methodPill(p)}
+              ${lightPill(p)}
               ${waterPill(p)}
             </span>
           </span>
@@ -696,7 +726,13 @@
         <h2>Watering</h2>
         ${row('set-season', season.emoji, 'Watering schedule', `${esc(season.name)} · ${auto ? 'automatic' : 'set manually'}`)}
         ${row('set-holiday', '🏖️', 'Holiday mode', h ? `On · ${esc(W.friendly(h.start))} → ${esc(W.friendly(h.end))}` : 'Off · make a plan for your plant-sitter')}
-        ${row('set-guide', '📖', 'Watering guide', 'From the top or below, rain or tap, and spotting problems')}
+        ${row('set-guide', '📖', 'Watering guide', 'From the top or below, rain or tap, light, and spotting problems')}
+        <div class="settings-card">
+          <div class="reminder-row switch-only">
+            <span class="season-text"><strong>🌧️ Show water type</strong><span>Rain or tap water on plant cards and the sitter’s plan. Turn off if you only use tap water.</span></span>
+            <button type="button" class="switch ${Store.showWaterType() ? 'is-on' : ''}" id="water-type-toggle" role="switch" aria-checked="${Store.showWaterType()}" aria-label="Show water type"><span></span></button>
+          </div>
+        </div>
       </section>
 
       <section class="settings-group">
@@ -841,7 +877,7 @@
           openPlantForm(null, { name: typed ? typed.charAt(0).toUpperCase() + typed.slice(1) : '', species: Catalog.guess(typed) });
         } else {
           const c = Catalog.get(b.dataset.pick);
-          openPlantForm(null, { name: c.name, detail: c.latin, species: c.key, waterType: c.waterType, waterMethod: Catalog.defaultMethod(c.key), notes: c.note });
+          openPlantForm(null, { name: c.name, detail: c.latin, species: c.key, waterType: c.waterType, waterMethod: Catalog.defaultMethod(c.key), light: Catalog.defaultLight(c.key), notes: c.note });
         }
       });
     });
@@ -891,6 +927,15 @@
           <label>New room name<input name="newRoom" placeholder="e.g. Hallway"></label>
         </div>
         <label>Spot in the room<input name="placement" value="${esc(p.placement)}" placeholder="e.g. Windowsill"></label>
+        <div class="label-row">
+          <span class="label-text" id="light-label">Light</span>
+          <button type="button" class="help-inline" data-guide="light" aria-label="Light levels: open the watering guide">?</button>
+        </div>
+        <input type="hidden" name="light" value="${esc(p.light || 'half')}">
+        <div class="segmented light-choice" role="radiogroup" aria-labelledby="light-label">
+          ${Catalog.lights.map((l) => `<button type="button" role="radio" data-light="${l.key}" aria-checked="${(p.light || 'half') === l.key}" class="${(p.light || 'half') === l.key ? 'is-active' : ''}">${sunIcon(l.key, 20)}<span>${esc(l.short)}</span></button>`).join('')}
+        </div>
+        <p class="method-hint" id="light-hint">${esc(Catalog.lightInfo(p.light).how)}</p>
 
         <fieldset class="water-box">
           <legend>💧 Watering</legend>
@@ -914,18 +959,20 @@
           </div>
           <div class="label-row">
             <label for="water-method">How to water</label>
-            <button type="button" class="help-inline" data-guide="${esc(p.waterMethod || 'top')}" aria-label="How to water: open the watering guide">?</button>
+            <button type="button" class="help-inline" id="method-help" data-guide="${esc(p.waterMethod || 'top')}" aria-label="How to water: open the watering guide">?</button>
           </div>
           <select id="water-method" name="waterMethod">
             ${Catalog.methods.map((m) => `<option value="${m.key}" ${m.key === (p.waterMethod || 'top') ? 'selected' : ''}>${m.emoji} ${esc(m.name)}</option>`).join('')}
           </select>
           <p class="method-hint" id="method-hint">${esc(Catalog.method(p.waterMethod).how)}</p>
+          <div class="water-type-field" ${Store.showWaterType() ? '' : 'hidden'}>
           <div class="label-row">
             <label for="water-type">Water type</label>
             <button type="button" class="help-inline" data-guide="water" aria-label="Rain or tap water: open the watering guide">?</button>
           </div>
           <input id="water-type" name="waterType" list="water-types" value="${esc(p.waterType)}">
           <datalist id="water-types">${WATER_TYPES.map((w) => `<option value="${esc(w)}">`).join('')}</datalist>
+          </div>
           ${history ? `<div class="history"><span class="muted small">Recent waterings</span><div>${history}</div></div>` : ''}
         </fieldset>
 
@@ -955,12 +1002,26 @@
           fillSchedule(Catalog.schedule(species, c.minDays, c.maxDays));
           form.waterMethod.value = Catalog.defaultMethod(species);
           form.waterMethod.dispatchEvent(new Event('change'));
+          setLight(Catalog.defaultLight(species));
           recalcDue();
         }
       });
+      function setLight(key) {
+        form.light.value = key;
+        body.querySelectorAll('[data-light]').forEach((b) => {
+          const on = b.dataset.light === key;
+          b.classList.toggle('is-active', on);
+          b.setAttribute('aria-checked', String(on));
+        });
+        $('#light-hint', body).textContent = Catalog.lightInfo(key).how;
+      }
+      body.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-light]');
+        if (b) setLight(b.dataset.light);
+      });
       form.waterMethod.addEventListener('change', () => {
         $('#method-hint', body).textContent = Catalog.method(form.waterMethod.value).how;
-        $('.help-inline[data-guide]', body).dataset.guide = form.waterMethod.value;
+        $('#method-help', body).dataset.guide = form.waterMethod.value;
       });
       const currentMin = () => form[`min-${W.season()}`];
       function recalcDue() {
@@ -1007,6 +1068,7 @@
           schedule,
           waterType: form.waterType.value.trim(),
           waterMethod: form.waterMethod.value,
+          light: form.light.value,
           notes: form.notes.value.trim(),
           lastWatered,
           nextDue: form.nextDue.value || (lastWatered ? W.addDays(lastWatered, schedule[W.season()].min) : W.today()),
@@ -1106,6 +1168,12 @@
     if (t.id === 'set-holiday') { if (Store.holiday()) openHolidayPlan(); else openHolidayForm(); return; }
     if (t.dataset.themeChoice) { PlantTheme.set(t.dataset.themeChoice); render(); return; }
     if (t.id === 'export-btn') { exportBackup(); return; }
+    if (t.id === 'water-type-toggle') {
+      const on = !Store.showWaterType();
+      Store.setShowWaterType(on);
+      toast(on ? 'Water types shown 🌧️' : 'Water types hidden');
+      return;
+    }
     if (t.id === 'rem-toggle') {
       Native.setReminders(!Store.reminders().on).then((r) => {
         if (r === 'denied') toast('Notifications are blocked — allow them in your phone’s Settings');

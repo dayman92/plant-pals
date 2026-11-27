@@ -193,6 +193,31 @@
   // Catalogue ranges are WINTER values. Other seasons are derived with a
   // rule-of-thumb multiplier on the winter interval, by kind of plant: growing plants drink
   // more often in spring/summer; desert cacti and succulents swing the most.
+  // How much light each species wants. Anything not listed is 'half' (bright, but out of harsh sun).
+  //   full  = a sunny windowsill with a few hours of direct sun
+  //   half  = bright spot with indirect light or gentle morning/evening sun
+  //   shade = copes with a darker spot, well away from the window
+  const LIGHTS = [
+    { key: 'full', name: 'Full sun', short: 'Full sun', how: 'A sunny windowsill with a few hours of direct sun a day (south- or west-facing is ideal).' },
+    { key: 'half', name: 'Half sun', short: 'Half sun', how: 'A bright spot out of harsh midday sun: near an east- or north-facing window, or a metre or so back from a sunny one.' },
+    { key: 'shade', name: 'Shade', short: 'Shade', how: 'Copes with a darker spot further from the window. Keep it out of direct sun, which can scorch the leaves.' },
+  ];
+  const FULL_SUN = ['croton', 'coleus', 'string-of-pearls', 'string-of-dolphins', 'string-of-bananas', 'string-of-hearts',
+    'sago-palm', 'ponytail-palm', 'olive-tree', 'yucca', 'bird-of-paradise', 'banana-plant',
+    'kalanchoe', 'amaryllis', 'hibiscus', 'jasmine', 'geranium',
+    'echeveria', 'aloe-vera', 'jade-plant', 'mexican-hat-plant', 'panda-plant', 'paddle-plant', 'chalksticks', 'burros-tail',
+    'agave', 'hens-and-chicks', 'aeonium', 'lithops',
+    'golden-barrel', 'pincushion-cactus', 'mammillaria', 'blue-torch', 'bunny-ears', 'fairy-castle', 'old-man-cactus', 'star-cactus',
+    'basil', 'rosemary', 'thyme', 'chives', 'chilli-plant', 'lemon-tree', 'strawberry',
+    'venus-flytrap', 'pitcher-plant', 'sundew', 'sensitive-plant'];
+  const SHADE = ['zz-plant', 'snake-plant', 'cast-iron-plant', 'aglaonema', 'pothos', 'philodendron', 'satin-pothos',
+    'prayer-plant', 'calathea', 'rattlesnake-plant', 'fittonia',
+    'boston-fern', 'maidenhair-fern', 'birds-nest-fern', 'blue-star-fern',
+    'parlour-palm', 'kentia-palm', 'lady-palm', 'corn-plant', 'peace-lily', 'lucky-bamboo'];
+  const LIGHT_BY_SPECIES = {};
+  FULL_SUN.forEach((k) => { LIGHT_BY_SPECIES[k] = 'full'; });
+  SHADE.forEach((k) => { LIGHT_BY_SPECIES[k] = 'shade'; });
+
   const PROFILES = {
     standard: { spring: 0.75, summer: 0.55, autumn: 0.85, winter: 1 },
     herb: { spring: 0.7, summer: 0.5, autumn: 0.8, winter: 1 },
@@ -242,6 +267,11 @@
     method(key) { return methodByKey[key] || methodByKey.top; },
     /** Recommended way to water a species (most plants: from the top). */
     defaultMethod(speciesKey) { return DEFAULT_METHOD[speciesKey] || 'top'; },
+    lights: LIGHTS,
+    /** Light level details: 'full' | 'half' | 'shade' (falls back to half). */
+    lightInfo(key) { return LIGHTS.find((l) => l.key === key) || LIGHTS[1]; },
+    /** How much light a species wants (unknown / custom plants: half sun). */
+    defaultLight(speciesKey) { return LIGHT_BY_SPECIES[speciesKey] || 'half'; },
     /** Best-guess species key for a plant, checking the name first, then name + detail. */
     guess(name, detail = '') {
       for (const text of [name, `${name} ${detail}`]) {
