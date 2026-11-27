@@ -454,7 +454,7 @@ button { cursor: pointer; }
 /* ---------- print (sitter's plan → paper / PDF) ---------- */
 @media print {
   body { background: #fff; color: #000; }
-  .app, .sheet-backdrop, .toast, .sheet-handle, .sheet-actions, .sheet .sheet-intro + .row { display: none !important; }
+  .app, .guide, .sheet-backdrop, .toast, .sheet-handle, .sheet-actions, .sheet .sheet-intro + .row { display: none !important; }
   .sheet { position: static; transform: none !important; max-height: none; overflow: visible; box-shadow: none; padding: 0; background: #fff; }
   .plan-stop { break-inside: avoid; }
 }
@@ -478,3 +478,49 @@ button { cursor: pointer; }
 .settings-buttons .btn { width: 100%; text-align: left; }
 .about a { color: var(--link); font-weight: 800; }
 :root[data-theme="dark"] .btn-danger-text { color: #FF8F7E; }
+
+/* ---------- watering method & guide ---------- */
+.topbar { position: sticky; }
+.help-btn {
+  position: absolute; right: 16px; top: calc(14px + env(safe-area-inset-top));
+  width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.22); color: #fff; font-weight: 900; font-size: 1.1rem; line-height: 1;
+}
+.help-btn:active { transform: translateY(2px); }
+.pill-method { background: #E4F3E1; color: #2E6B3A; }
+:root[data-theme="dark"] .pill-method { background: #20381F; color: #A9DDA4; }
+.label-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: -6px; }
+.label-row label { font-weight: 800; font-size: 0.9rem; }
+.help-inline {
+  width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--water); background: var(--surface);
+  color: var(--water-dark); font-weight: 900; font-size: 0.85rem; line-height: 1; padding: 0;
+}
+:root[data-theme="dark"] .help-inline { color: var(--link); }
+.method-hint { margin: -4px 2px 0; font-size: 0.8rem; font-weight: 700; color: var(--text-muted); font-style: italic; }
+
+.guide {
+  position: fixed; inset: 0; z-index: 30; display: flex; flex-direction: column;
+  background: var(--bg); opacity: 0; transform: translateY(16px); transition: opacity 0.2s, transform 0.2s;
+}
+.guide.is-open { opacity: 1; transform: none; }
+.guide-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: calc(14px + env(safe-area-inset-top)) 16px 14px;
+  background: linear-gradient(135deg, var(--orange), var(--yellow)); color: #fff;
+  box-shadow: 0 4px 0 var(--orange-dark);
+}
+.guide-head h2 { margin: 0; font-size: 1.4rem; font-weight: 900; }
+.guide-close { width: 36px; height: 36px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.7); background: rgba(255, 255, 255, 0.22); color: #fff; font-weight: 900; }
+.guide-body { flex: 1; overflow-y: auto; padding: 16px 16px calc(24px + env(safe-area-inset-bottom)); max-width: 560px; width: 100%; margin: 0 auto; }
+.guide-lead { margin: 4px 2px 14px; font-weight: 700; }
+.guide-sec { background: var(--surface); border: 2px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; box-shadow: 0 3px 0 var(--border); }
+.guide-sec summary { padding: 14px; font-weight: 900; font-size: 1rem; cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+.guide-sec summary::-webkit-details-marker { display: none; }
+.guide-sec summary::after { content: '＋'; color: var(--orange-dark); font-weight: 900; }
+.guide-sec[open] summary::after { content: '－'; }
+.guide-content { padding: 0 14px 14px; font-size: 0.92rem; line-height: 1.45; }
+.guide-content p { margin: 0 0 10px; }
+.guide-content ul, .guide-content ol { margin: 0 0 10px; padding-left: 20px; }
+.guide-content li { margin-bottom: 6px; }
+.guide-art { display: block; width: 150px; height: auto; margin: 0 auto 10px; }
+.topbar h1, .topbar .subtitle { padding-right: 46px; }

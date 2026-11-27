@@ -27,7 +27,8 @@ The app is plain **HTML + CSS + JavaScript with no build step and no dependencie
 Room   { id, name, emoji }
 Plant  { id, name, detail, species|null, roomId|null, placement,
          schedule: { spring:{min,max}, summer:{…}, autumn:{…}, winter:{…} },
-         waterType, notes, lastWatered|null, nextDue, history: [dates, newest first] }
+         waterMethod: 'top'|'bottom'|'soak'|'cup'|'tray'|'vase', waterType, notes,
+         lastWatered|null, nextDue, history: [dates, newest first] }
 Settings { seasonMode: 'auto'|'spring'|'summer'|'autumn'|'winter', appliedSeason }
 ```
 `species` is a key into the plant catalogue ([js/catalog.js](js/catalog.js)) and picks the plant's illustration. Dates are local calendar days (`YYYY-MM-DD`).
@@ -39,6 +40,20 @@ See [js/watering.js](js/watering.js). Each plant has a range for the active seas
 - **Overdue** after the window. The plant turns thirsty in the Today list.
 - **Not yet** pushes a plant to tomorrow, for when the soil is still damp.
 - Every action shows an **Undo** toast.
+
+### How to water + watering guide
+Each plant has a **watering method**, shown as a pill on plant cards, in the Today list and in the sitter's plan:
+
+| Method | Default for |
+|---|---|
+| ⬇️ From the top | most plants |
+| ⬆️ From below | African violet, cyclamen, Cape primrose, Rex begonia, cuttings & seedlings |
+| 🛁 Soak & drain | orchids, air plants, staghorn ferns |
+| 🥤 Into the cup | bromeliads |
+| 🍽️ Stand in a tray | Venus flytrap, pitcher plants, sundews |
+| 🫙 Top up the vase | lucky bamboo |
+
+The plant form shows a one-line "how to" for the chosen method. The **watering guide** opens from the **?** in the top bar, the **?** next to "How to water" and "Water type" in the plant form, Settings → Watering guide, or the sitter's plan. It covers checking before watering, each method (with drawings for top, bottom and soak), rain vs tap water (and why to avoid softened water), and signs of over- or under-watering. It opens as its own layer on top of whatever is open, so it never loses unsaved form edits. The shared sitter's plan also ends with a short "How to water" section for the methods it uses.
 
 ### Seasons
 Each plant has a separate range for **spring, summer, autumn and winter**. A banner at the top of the Today tab shows which schedule is active, for example "🍂 Autumn schedule · Automatic". Tap it to change:

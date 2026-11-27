@@ -19,6 +19,7 @@
     if (!p.id) p.id = newId('p');
     if (p.species === undefined) p.species = Catalog.guess(p.name, p.detail);
     if (!p.schedule) p.schedule = Catalog.schedule(p.species, p.minDays, p.maxDays); // old single range = winter
+    if (!p.waterMethod) p.waterMethod = Catalog.defaultMethod(p.species);
     delete p.minDays; delete p.maxDays; delete p.frequencyLabel;
     if (!Array.isArray(p.history)) p.history = [];
     if (p.lastWatered === undefined) p.lastWatered = null;

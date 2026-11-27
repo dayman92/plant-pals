@@ -49,6 +49,10 @@
     const rain = /rain/i.test(p.waterType);
     return `<span class="pill ${rain ? 'pill-rain' : 'pill-tap'}">${rain ? '🌧️' : '🚰'} ${esc(p.waterType)}</span>`;
   }
+  function methodPill(p) {
+    const m = Catalog.method(p.waterMethod);
+    return `<span class="pill pill-method">${m.emoji} ${esc(m.name)}</span>`;
+  }
   function statusPill(p) {
     const s = W.status(p);
     return `<span class="pill s-${s.kind}">${s.kind === 'overdue' ? '🥵' : s.kind === 'due' ? '💧' : '🗓️'} ${esc(s.label)}</span>`;
@@ -360,7 +364,8 @@
       groupByRoom(stop.items).forEach(([room, items]) => {
         lines.push(`${room}:`);
         items.forEach(({ plant: p, tight }) => {
-          const bits = [p.placement, p.waterType && (/rain/i.test(p.waterType) ? `${p.waterType} 🌧️` : p.waterType)].filter(Boolean).join(' · ');
+          const bits = [p.placement, Catalog.method(p.waterMethod).name.toLowerCase(),
+            p.waterType && (/rain/i.test(p.waterType) ? `${p.waterType} 🌧️` : p.waterType)].filter(Boolean).join(' · ');
           lines.push(`• ${p.name}${bits ? ` (${bits})` : ''}${tight ? ' — give it a thorough soak' : ''}`);
           const tip = firstSentence(p.notes);
           if (tip) lines.push(`   ${tip}`);
@@ -369,6 +374,13 @@
       lines.push('');
     });
     if (plan.idle.length) lines.push(`No water needed while I’m away: ${plan.idle.map((p) => p.name).join(', ')}.`, '');
+    // Short "how to" for each watering method that appears in the plan.
+    const used = [...new Set(plan.stops.filter((s) => s.who === 'sitter').flatMap((s) => s.items.map((it) => it.plant.waterMethod)))];
+    if (used.length) {
+      lines.push('How to water:');
+      used.forEach((k) => { const m = Catalog.method(k); lines.push(`${m.emoji} ${m.name}: ${m.how}`); });
+      lines.push('');
+    }
     lines.push('Thank you! 💚');
     return lines.join('\n');
   }
@@ -399,7 +411,7 @@
                 <span class="row-text">
                   <span class="plant-name">${esc(p.name)}</span>
                   <span class="row-sub">${p.placement ? `📍 ${esc(p.placement)}` : ''}</span>
-                  <span class="pills">${waterPill(p)}${tight ? '<span class="pill s-due">Give a thorough soak</span>' : ''}</span>
+                  <span class="pills">${methodPill(p)}${waterPill(p)}${tight ? '<span class="pill s-due">Give a thorough soak</span>' : ''}</span>
                   ${firstSentence(p.notes) ? `<span class="row-hint">${esc(firstSentence(p.notes))}</span>` : ''}
                 </span>
               </li>`).join('')}</ul>`).join('')
@@ -413,6 +425,7 @@
         <button class="btn btn-primary" id="plan-share">Share</button>
         <button class="btn btn-ghost" id="plan-copy">Copy text</button>
         <button class="btn btn-ghost" id="plan-print">Print / PDF</button>
+        <button class="btn btn-ghost" data-guide="check">? How to water</button>
       </div>
       ${stopsHtml}
       ${plan.idle.length ? `<section class="plan-stop"><h3>No water needed while you’re away</h3><p class="muted small">${esc(plan.idle.map((p) => p.name).join(', '))}</p></section>` : ''}`, (body) => {
@@ -458,6 +471,98 @@
     });
   }
 
+  // ---------- watering guide ----------
+  /** Small explanatory drawings for the guide. */
+  function guideArt(kind) {
+    const pot = (y = 0) => `
+      <path d="M40 ${40 + y} L80 ${40 + y} L75 ${76 + y} Q74 ${79 + y} 71 ${79 + y} L49 ${79 + y} Q46 ${79 + y} 45 ${76 + y} Z" fill="#E2733B"/>
+      <path d="M70 ${40 + y} L80 ${40 + y} L75 ${76 + y} Q74 ${79 + y} 71 ${79 + y} L67 ${79 + y} Z" fill="#C2582A"/>
+      <rect x="36" y="${34 + y}" width="48" height="8" rx="3" fill="#EE8A50"/>
+      <path d="M60 ${34 + y} Q50 ${18 + y} 44 ${14 + y} Q58 ${14 + y} 60 ${30 + y} Q62 ${12 + y} 76 ${10 + y} Q70 ${20 + y} 60 ${34 + y} Z" fill="#58B368"/>`;
+    const drop = (x, y, s = 1) => `<path d="M${x} ${y} c${2 * s} ${3 * s} ${3.5 * s} ${5 * s} ${3.5 * s} ${7 * s} a${3.5 * s} ${3.5 * s} 0 0 1 -${7 * s} 0 c0 -${2 * s} ${1.5 * s} -${4 * s} ${3.5 * s} -${7 * s}z" fill="#3BA7E5"/>`;
+    const arrow = (x, y, up) => `<path d="M${x} ${y} l0 ${up ? -12 : 12} M${x - 5} ${y + (up ? -7 : 7)} l5 ${up ? -5 : 5} l5 ${up ? 5 : -5}" stroke="#2582BC" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    const bowl = (top) => `<path d="M16 ${top} L104 ${top} L98 86 Q97 89 93 89 L27 89 Q23 89 22 86 Z" fill="#CFE7F7" opacity=".95"/><path d="M14 ${top - 2} L106 ${top - 2}" stroke="#9CC6E4" stroke-width="3" stroke-linecap="round"/>`;
+    const water = (top) => `<rect x="20" y="${top}" width="80" height="${88 - top}" fill="#7CC4EE" opacity=".55"/>`;
+    let inner = '';
+    if (kind === 'top') inner = pot(8) + drop(30, 6) + drop(22, 20, 0.8) + drop(34, 26, 0.7) + arrow(98, 30, false) + `<path d="M8 4 q10 -2 18 4" stroke="#9CC6E4" stroke-width="4" fill="none" stroke-linecap="round"/>`;
+    if (kind === 'bottom') inner = bowl(66) + pot(4) + water(70) + arrow(60, 80, true) + arrow(48, 76, true) + arrow(72, 76, true);
+    if (kind === 'soak') inner = bowl(36) + pot(6) + water(40);
+    return `<svg class="guide-art" viewBox="0 0 120 92" aria-hidden="true">${inner}</svg>`;
+  }
+
+  function guideHtml() {
+    const sec = (id, title, body, art = '') => `
+      <details class="guide-sec" id="g-${id}">
+        <summary>${title}</summary>
+        <div class="guide-content">${art}${body}</div>
+      </details>`;
+    const m = (k) => Catalog.method(k);
+    return `
+      <p class="guide-lead">Most watering problems come from watering by the calendar instead of by the plant. Treat Plant Pals’ dates as a reminder to <strong>check</strong>, then water the right way for that plant.</p>
+      ${sec('check', '🖐️ Check before you water', `
+        <ul>
+          <li><strong>Finger test:</strong> push a finger 2–3 cm into the soil. Dry? Water it. Still damp? Tap <em>Not yet</em> and check tomorrow.</li>
+          <li><strong>Lift the pot:</strong> a dry pot feels noticeably lighter than a freshly watered one.</li>
+          <li><strong>Know the plant:</strong> cacti and succulents should dry out completely; ferns, fittonias and calatheas only want the surface to dry.</li>
+        </ul>`)}
+      ${sec('top', `${m('top').emoji} Watering from the top`, `
+        <ol>
+          <li>Use room-temperature water.</li>
+          <li>Pour slowly over the soil all round the pot, under the leaves.</li>
+          <li>Keep going until water runs out of the drainage holes — that means the whole root ball is wet.</li>
+          <li>After 15 minutes, tip away any water left in the saucer or outer pot.</li>
+        </ol>
+        <p><strong>Good for:</strong> most houseplants. It also flushes out salt and lime build-up from the compost.</p>
+        <p><strong>Avoid:</strong> splashing fuzzy leaves (African violets), rosettes (echeveria) and the crowns of snake plants.</p>`, guideArt('top'))}
+      ${sec('bottom', `${m('bottom').emoji} Watering from below`, `
+        <ol>
+          <li>Put 2–5 cm of water in a bowl, sink or deep saucer.</li>
+          <li>Stand the pot in it — it needs drainage holes.</li>
+          <li>Leave it 15–30 minutes, until the top of the soil feels damp.</li>
+          <li>Lift it out and let it drain before putting it back.</li>
+        </ol>
+        <p><strong>Good for:</strong> plants that hate wet leaves or crowns (African violets, cyclamen, Cape primrose), seedlings and cuttings, pots where leaves cover the soil, and compost so dry it has shrunk from the pot edge (top watering would run straight past). Roots grow down towards the water, which makes for sturdier plants.</p>
+        <p><strong>Watch out:</strong> it doesn’t flush out minerals, so give a top watering about once a month. Never leave a pot standing in water for hours.</p>`, guideArt('bottom'))}
+      ${sec('soak', `${m('soak').emoji} Soak & drain`, `
+        <ul>
+          <li><strong>Orchids in bark:</strong> when the roots look silvery, soak the pot for 10–15 minutes, then drain completely.</li>
+          <li><strong>Air plants:</strong> soak in rainwater for 20 minutes, shake gently and dry upside down so water doesn’t sit in the base.</li>
+          <li><strong>Staghorn ferns:</strong> soak the root ball when the plant feels light.</li>
+          <li><strong>Rescue:</strong> also the best way to re-wet any compost that’s gone bone dry.</li>
+        </ul>`, guideArt('soak'))}
+      ${sec('cup', `${m('cup').emoji} Into the cup (bromeliads)`, `
+        <p>Bromeliads drink through the “cup” formed by their leaves. Keep it about a quarter full of rainwater and empty and refill it every month so it doesn’t go stale. Just barely moisten the compost.</p>`)}
+      ${sec('tray', `${m('tray').emoji} Standing in a tray (carnivorous plants)`, `
+        <p>Venus flytraps, pitcher plants and sundews like constantly damp roots. Keep 1–2 cm of <strong>rainwater</strong> in the saucer during spring and summer. In their winter rest, let the tray dry and keep the compost just moist. Never use tap water — the minerals slowly kill them.</p>`)}
+      ${sec('vase', `${m('vase').emoji} Top up the vase (lucky bamboo)`, `
+        <p>Keep the roots covered with filtered or rainwater and replace it completely every couple of weeks, rinsing the vase and pebbles.</p>`)}
+      ${sec('water', '🌧️ Rain or tap water?', `
+        <p><strong>Rainwater</strong> is naturally soft, with no chlorine, fluoride or lime. It’s best for calatheas and prayer plants, ferns, peace lilies, dracaenas (fluoride causes their brown tips), orchids and bromeliads, and essential for carnivorous plants. Collect it in a clean, covered butt or bucket, use it within a few weeks, and bring it indoors to warm up first.</p>
+        <p><strong>Tap water</strong> is fine for most tough plants — succulents, cacti, pothos, monstera, ZZ plants. In hard-water areas (much of southern and eastern England) lime builds up as a white crust on soil and pots; flush with a good top watering now and then, or switch sensitive plants to rainwater. Letting tap water stand overnight brings it to room temperature and lets some chlorine escape.</p>
+        <p><strong>Also good:</strong> filtered jug water, or boiled and cooled water. Use distilled water for carnivorous plants if you have no rain. <strong>Avoid softened water</strong> from a water softener — the salt in it harms plants.</p>
+        <p><strong>Temperature:</strong> always use room-temperature (“tepid”) water — cold water can shock tropical roots and mark leaves.</p>`)}
+      ${sec('signs', '🩺 Too much or too little?', `
+        <p><strong>Overwatered:</strong> yellow, soft lower leaves · mushy stems · compost that never dries · fungus gnats · a musty smell.</p>
+        <p><strong>Underwatered:</strong> crispy brown edges · drooping that perks up after a drink · compost shrinking from the pot edge · a very light pot.</p>
+        <p>Far more houseplants die from too much water than too little — if in doubt, wait a day.</p>`)}`;
+  }
+
+  function openGuide(section) {
+    const g = $('#guide');
+    $('#guide-body').innerHTML = guideHtml();
+    g.hidden = false;
+    requestAnimationFrame(() => g.classList.add('is-open'));
+    const target = section && $(`#g-${section}`, g);
+    if (target) { target.open = true; setTimeout(() => target.scrollIntoView({ block: 'start' }), 60); }
+    else $('#guide-body').scrollTop = 0;
+    $('#guide-close').focus({ preventScroll: true });
+  }
+  function closeGuide() {
+    const g = $('#guide');
+    g.classList.remove('is-open');
+    setTimeout(() => { g.hidden = true; }, 200);
+  }
+
   function waterRow(p, s) {
     return `
       <li class="water-row s-${s.kind}" data-row="${esc(p.id)}">
@@ -466,7 +571,7 @@
           <span class="row-text">
             <span class="plant-name">${esc(p.name)}</span>
             <span class="row-sub">${esc(roomLabel(p))}${p.placement ? ` · ${esc(p.placement)}` : ''}</span>
-            <span class="pills">${statusPill(p)}${waterPill(p)}</span>
+            <span class="pills">${statusPill(p)}${methodPill(p)}${waterPill(p)}</span>
             ${s.hint && s.kind === 'due' ? `<span class="row-hint">${esc(s.hint)}</span>` : ''}
           </span>
         </button>
@@ -535,6 +640,7 @@
             <span class="pills">
               ${statusPill(p)}
               ${freq ? `<span class="pill pill-freq" title="${esc(W.seasonInfo().name)} schedule">${W.seasonInfo().emoji} ${esc(freq)}</span>` : ''}
+              ${methodPill(p)}
               ${waterPill(p)}
             </span>
           </span>
@@ -590,6 +696,7 @@
         <h2>Watering</h2>
         ${row('set-season', season.emoji, 'Watering schedule', `${esc(season.name)} · ${auto ? 'automatic' : 'set manually'}`)}
         ${row('set-holiday', '🏖️', 'Holiday mode', h ? `On · ${esc(W.friendly(h.start))} → ${esc(W.friendly(h.end))}` : 'Off · make a plan for your plant-sitter')}
+        ${row('set-guide', '📖', 'Watering guide', 'From the top or below, rain or tap, and spotting problems')}
       </section>
 
       <section class="settings-group">
@@ -706,7 +813,7 @@
           openPlantForm(null, { name: typed ? typed.charAt(0).toUpperCase() + typed.slice(1) : '', species: Catalog.guess(typed) });
         } else {
           const c = Catalog.get(b.dataset.pick);
-          openPlantForm(null, { name: c.name, detail: c.latin, species: c.key, waterType: c.waterType, notes: c.note });
+          openPlantForm(null, { name: c.name, detail: c.latin, species: c.key, waterType: c.waterType, waterMethod: Catalog.defaultMethod(c.key), notes: c.note });
         }
       });
     });
@@ -724,6 +831,7 @@
     if (!existing) {
       const c = Catalog.get(p.species);
       p.schedule = Catalog.schedule(p.species, c ? c.minDays : 7, c ? c.maxDays : 10);
+      if (!p.waterMethod) p.waterMethod = Catalog.defaultMethod(p.species);
       p.nextDue = W.dueAfter(p, p.lastWatered || today);
     }
 
@@ -776,7 +884,19 @@
             <label>Last watered<input name="lastWatered" type="date" max="${today}" value="${esc(p.lastWatered || '')}"></label>
             <label>Next due<input name="nextDue" type="date" value="${esc(p.nextDue || '')}"></label>
           </div>
-          <label>Water type<input name="waterType" list="water-types" value="${esc(p.waterType)}"></label>
+          <div class="label-row">
+            <label for="water-method">How to water</label>
+            <button type="button" class="help-inline" data-guide="${esc(p.waterMethod || 'top')}" aria-label="How to water: open the watering guide">?</button>
+          </div>
+          <select id="water-method" name="waterMethod">
+            ${Catalog.methods.map((m) => `<option value="${m.key}" ${m.key === (p.waterMethod || 'top') ? 'selected' : ''}>${m.emoji} ${esc(m.name)}</option>`).join('')}
+          </select>
+          <p class="method-hint" id="method-hint">${esc(Catalog.method(p.waterMethod).how)}</p>
+          <div class="label-row">
+            <label for="water-type">Water type</label>
+            <button type="button" class="help-inline" data-guide="water" aria-label="Rain or tap water: open the watering guide">?</button>
+          </div>
+          <input id="water-type" name="waterType" list="water-types" value="${esc(p.waterType)}">
           <datalist id="water-types">${WATER_TYPES.map((w) => `<option value="${esc(w)}">`).join('')}</datalist>
           ${history ? `<div class="history"><span class="muted small">Recent waterings</span><div>${history}</div></div>` : ''}
         </fieldset>
@@ -805,8 +925,14 @@
         if (!existing && species) {
           const c = Catalog.get(species);
           fillSchedule(Catalog.schedule(species, c.minDays, c.maxDays));
+          form.waterMethod.value = Catalog.defaultMethod(species);
+          form.waterMethod.dispatchEvent(new Event('change'));
           recalcDue();
         }
+      });
+      form.waterMethod.addEventListener('change', () => {
+        $('#method-hint', body).textContent = Catalog.method(form.waterMethod.value).how;
+        $('.help-inline[data-guide]', body).dataset.guide = form.waterMethod.value;
       });
       const currentMin = () => form[`min-${W.season()}`];
       function recalcDue() {
@@ -852,6 +978,7 @@
           placement: form.placement.value.trim(),
           schedule,
           waterType: form.waterType.value.trim(),
+          waterMethod: form.waterMethod.value,
           notes: form.notes.value.trim(),
           lastWatered,
           nextDue: form.nextDue.value || (lastWatered ? W.addDays(lastWatered, schedule[W.season()].min) : W.today()),
@@ -944,6 +1071,9 @@
     if (t.dataset.roomView) { state.tab = 'plants'; state.roomFilter = t.dataset.roomView; render(); window.scrollTo(0, 0); return; }
     if (t.hasAttribute('data-close')) { closeSheet(); return; }
     if (t.id === 'fab') { if (state.tab === 'plants') openPicker(); else openRoomForm(); return; }
+    if (t.id === 'help-btn' || t.id === 'set-guide') { openGuide(); return; }
+    if (t.dataset.guide !== undefined) { openGuide(t.dataset.guide); return; }
+    if (t.id === 'guide-close') { closeGuide(); return; }
     if (t.id === 'season-btn' || t.id === 'set-season') { openSeasonPicker(); return; }
     if (t.id === 'set-holiday') { if (Store.holiday()) openHolidayPlan(); else openHolidayForm(); return; }
     if (t.dataset.themeChoice) { PlantTheme.set(t.dataset.themeChoice); render(); return; }
@@ -995,7 +1125,11 @@
   });
 
   $('#sheet-backdrop').addEventListener('click', closeSheet);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!$('#guide').hidden) closeGuide();
+    else if (!$('#sheet').hidden) closeSheet();
+  });
 
   // Re-render when the app comes back to the foreground on a new day.
   let renderedDay = W.today();

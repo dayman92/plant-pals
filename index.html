@@ -36,6 +36,7 @@
 <body>
   <div class="app">
     <header class="topbar">
+      <button id="help-btn" class="help-btn" aria-label="Watering guide">?</button>
       <h1 id="screen-title">Today</h1>
       <p id="screen-subtitle" class="subtitle"></p>
     </header>
@@ -58,6 +59,15 @@
     <div class="sheet-handle"></div>
     <h2 id="sheet-title"></h2>
     <div id="sheet-body"></div>
+  </section>
+
+  <!-- Watering guide: its own layer so it can open on top of a form without losing edits -->
+  <section id="guide" class="guide" role="dialog" aria-modal="true" aria-labelledby="guide-title" hidden>
+    <header class="guide-head">
+      <h2 id="guide-title">Watering guide</h2>
+      <button class="guide-close" id="guide-close" aria-label="Close guide">✕</button>
+    </header>
+    <div id="guide-body" class="guide-body"></div>
   </section>
 
   <div id="toast" class="toast" role="status" hidden></div>

@@ -171,6 +171,24 @@
   const byKey = Object.fromEntries(CATALOG.map((c) => [c.key, c]));
   const groupByKey = Object.fromEntries(GROUPS.map((g) => [g.key, g]));
 
+  // ----- how to water -----
+  const METHODS = [
+    { key: 'top', name: 'From the top', emoji: '⬇️', how: 'Pour slowly onto the soil (not the leaves) until water runs out of the drainage holes, then empty the saucer after 15 minutes.' },
+    { key: 'bottom', name: 'From below', emoji: '⬆️', how: 'Stand the pot in 2–5 cm of water for 15–30 minutes, until the top of the soil feels damp, then let it drain.' },
+    { key: 'soak', name: 'Soak & drain', emoji: '🛁', how: 'Dunk the pot (or the whole plant) in water for 10–20 minutes, then let it drain completely.' },
+    { key: 'cup', name: 'Into the cup', emoji: '🥤', how: 'Keep the cup in the centre of the leaves a quarter full of fresh rainwater, refreshed monthly. Only barely moisten the soil.' },
+    { key: 'tray', name: 'Stand in a tray', emoji: '🍽️', how: 'Keep 1–2 cm of rainwater in the saucer so the pot drinks from below. Let it dry a little more in winter.' },
+    { key: 'vase', name: 'Top up the vase', emoji: '🫙', how: 'Keep the roots covered with water and change it completely every couple of weeks.' },
+  ];
+  const methodByKey = Object.fromEntries(METHODS.map((m) => [m.key, m]));
+  const DEFAULT_METHOD = {
+    'african-violet': 'bottom', cyclamen: 'bottom', streptocarpus: 'bottom', 'rex-begonia': 'bottom', 'propagation-tray': 'bottom',
+    orchid: 'soak', 'air-plant': 'soak', 'staghorn-fern': 'soak',
+    bromeliad: 'cup',
+    'venus-flytrap': 'tray', 'pitcher-plant': 'tray', sundew: 'tray',
+    'lucky-bamboo': 'vase',
+  };
+
   // ----- seasonal schedules -----
   // Catalogue ranges are WINTER values. Other seasons are derived with a
   // rule-of-thumb multiplier on the winter interval, by kind of plant: growing plants drink
@@ -220,6 +238,10 @@
     group(key) { return groupByKey[key] || null; },
     get(key) { return byKey[key] || null; },
     schedule,
+    methods: METHODS,
+    method(key) { return methodByKey[key] || methodByKey.top; },
+    /** Recommended way to water a species (most plants: from the top). */
+    defaultMethod(speciesKey) { return DEFAULT_METHOD[speciesKey] || 'top'; },
     /** Best-guess species key for a plant, checking the name first, then name + detail. */
     guess(name, detail = '') {
       for (const text of [name, `${name} ${detail}`]) {
