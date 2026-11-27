@@ -4,11 +4,12 @@ A small phone app for tracking houseplants, the rooms they live in, and their wa
 
 ## Approach
 
-### Platform: an installable web app (PWA)
-The app is plain **HTML + CSS + JavaScript with no build step and no dependencies**.
+### Platform: one web app, two ways to run it
+The app itself is plain **HTML + CSS + JavaScript with no build step**, in [www/](www/).
 
-- **Why:** it needs no Node or Flutter toolchain. It runs in any browser, can be "Added to Home Screen" on iPhone or Android so it opens full-screen like a native app, and works offline once installed.
-- **Trade-off:** no app-store distribution and limited background notifications, especially on iOS. If watering reminders need true push notifications later, we can wrap the same code with Capacitor or port it to Expo/React Native. The data model and UI structure carry over either way.
+- **Web app (PWA):** served from GitHub Pages. It runs in any browser, installs to the home screen and works offline.
+- **Android app:** the same `www/` files wrapped with [Capacitor](https://capacitorjs.com) into a real APK ([android/](android/)). This adds what a web page can't do reliably: **daily watering reminders** scheduled on the phone, plus Android's share sheet for backups. [www/js/native.js](www/js/native.js) holds those extras. In the browser it detects that it isn't in the app and does nothing, so one codebase serves both.
+- **No server, no accounts, no tracking.** A Content-Security-Policy in `index.html` blocks the page from loading anything from other sites, and the Nunito font is bundled ([www/fonts/](www/fonts/), SIL Open Font License).
 
 ### Data: on-device storage
 - All rooms and plants are stored in the browser's `localStorage` under one versioned key (`plantPals.data.v2`). See [js/store.js](js/store.js). Data saved by an older version is upgraded automatically on load.
@@ -106,7 +107,8 @@ Some plants could fit more than one group; they go where a non-specialist would 
 
 ### Settings page
 The ⚙️ **Settings** tab gathers:
-- **Watering:** the season schedule (same as the banner on Today) and holiday mode.
+- **Watering:** the season schedule (same as the banner on Today), holiday mode and the watering guide.
+- **Reminders (Android app):** a daily notification at a time you choose, only on days when plants are due. The browser version shows a note instead.
 - **Appearance:** theme *Automatic* (follows the phone), *Light* or *Dark*. The theme is applied by a small script in `<head>` before the first paint, so there's no flash of the wrong theme. Dark-mode CSS is keyed on `<html data-theme="dark">`. The page also declares `<meta name="color-scheme" content="light dark">`, so Android Chrome's "dark theme for sites" option doesn't auto-darken or invert the page and plant drawings.
 - **Your data:** backup status, Export / Import backup, Restore a snapshot, Clear all plants.
 - **About.**
@@ -118,37 +120,55 @@ The ⚙️ **Settings** tab gathers:
 
 ### Code layout
 ```text
-index.html            app shell (top bar, screen, tab bar, bottom sheet)
-css/styles.css        theme tokens + all styles
-js/catalog.js         120 common houseplants in 10 groups: defaults + name matching
-js/watering.js        date maths, seasons, due/overdue status
-js/plant-art.js       SVG plant characters (species × mood)
-js/store.js           data layer: load/save/migrate, CRUD, water/snooze/undo, season setting
-js/app.js             UI: rendering, forms, events
-sw.js                 service worker for offline use
-manifest.webmanifest  home-screen install metadata
-icons/                app icons (SVG sources + 192/512/maskable PNGs for Android)
+www/                      the app (published to GitHub Pages, bundled into the APK)
+  index.html              app shell (top bar, screen, tab bar, bottom sheet, guide)
+  css/styles.css          theme tokens + all styles
+  js/catalog.js           120 common houseplants in 10 groups: defaults + name matching
+  js/watering.js          date maths, seasons, due/overdue status
+  js/plant-art.js         SVG plant characters (species × mood)
+  js/store.js             data layer: load/save/migrate, CRUD, water/snooze/undo, settings
+  js/native.js            Android-app extras: reminders, share sheet, back button
+  js/app.js               UI: rendering, forms, events
+  fonts/                  bundled Nunito font + licence
+  sw.js                   service worker for offline use (web only)
+  manifest.webmanifest    home-screen install metadata
+  icons/                  web app icons
+android/                  Capacitor's Android project (generated, plus our tweaks)
+assets/                   source images for the Android icon and splash screen
+capacitor.config.json     app id, name, notification icon colour
+scripts/build-apk.ps1     builds a signed APK into dist/  (npm run apk)
 ```
 
 ## Running it
 
-### On an Android phone
+### Android app (APK)
+**Install on your phone:** copy `dist/PlantPals-<version>.apk` to the phone (Google Drive, email to yourself, or USB), tap it, and allow "install unknown apps" for whichever app you opened it from when Android asks. Then:
+- **Move your plants across:** the APK has its own storage, separate from the web version. In the web app, use Settings → **Export backup**. In the Android app, use **Import backup** and pick that file.
+- **Turn on reminders:** Settings → Reminders, then allow notifications when asked.
+- **Updates:** install a newer APK over the top. Your data is kept, as long as it's signed with the same key.
+
+**Building it** (Windows; one-off setup already done on the dev PC):
+- Tools: Node.js LTS, Microsoft OpenJDK 21 (Gradle doesn't yet run on Android Studio's bundled Java 25), and the Android SDK (platform 36). Android Studio is optional, for opening `android/` in an IDE.
+- Signing: release builds are signed with a private key kept **outside the repo**. `android/keystore.properties` (gitignored) points at it. **Back up the key**: without it you can't publish updates that install over the existing app.
+- Build: `npm run apk`, which runs `cap sync`, a Gradle release build, and copies the APK to `dist/`.
+- After changing anything in `www/`, rebuild the APK so the app gets the change. The web version updates when pushed.
+
+### Web app on an Android phone
 The app is an installable web app. Chrome on Android installs it like a normal app, with its own icon in the app drawer, opening full-screen and working offline. Chrome only offers to install over **HTTPS**, so the files need to be hosted somewhere first:
 
-1. **Host it (free):** push this repo to GitHub and turn on **GitHub Pages** (Settings → Pages → deploy from the `main` branch). It will be served at `https://<username>.github.io/<repo>/`. Netlify or Cloudflare Pages also work.
+1. **Host it (free):** this repo deploys `www/` to **GitHub Pages** through the Actions workflow in `.github/workflows/pages.yml`, at `https://dayman92.github.io/plant-pals/`. Netlify or Cloudflare Pages also work.
 2. **Install:** open that URL in **Chrome on the phone**, then tap ⋮ → **Install app** (or **Add to Home screen**).
 3. **Update:** push changes to GitHub. The app picks them up the next time it's opened online.
 
 Notes:
 - **Your data stays on the phone.** Hosting only serves the app's files, and the repo contains no plant data. Plants you add and your watering history are stored in Chrome's storage for the app on your device. Use **Export backup** now and then, because uninstalling the app or clearing Chrome's data wipes them.
 - **Moving plants onto the phone:** copy a backup `.json` file to the phone (by email, Drive, USB, etc.), then use **Import backup** in the app.
-- **Want a real `.apk` file?** Once the app is hosted, [PWABuilder](https://www.pwabuilder.com) can wrap the URL into an Android package (a "Trusted Web Activity"). You can sideload it or publish it to the Play Store. It runs the same code. This is only worth doing for Play Store distribution or reliable notifications later.
 
 ### On a computer
 
-Open `index.html` directly in Chrome or Edge, or serve the folder:
+Open `www/index.html` directly in Chrome or Edge, or serve the folder:
 ```sh
-python -m http.server 8000
+python -m http.server 8000 -d www
 ```
 Then visit http://localhost:8000. To get a phone-sized view, use the browser dev tools' device mode (F12 → Ctrl+Shift+M).
 
@@ -161,6 +181,6 @@ Then visit http://localhost:8000. To get a phone-sized view, use the browser dev
 4. ✅ **Plant characters:** Duolingo-style illustration per species, with happy / due / thirsty moods.
 5. ✅ **Seasons:** spring/summer/autumn/winter ranges per plant, automatic or pinned season, and a banner on Today.
 6. ✅ **Backup import / clear all:** restore or move data with a JSON file; the app ships with no starter data.
-7. **Reminders:** local notifications. This may need a Capacitor wrapper for reliable delivery on iOS.
+7. ✅ **Reminders:** daily local notifications in the Android app (Capacitor), scheduled three weeks ahead, recalculated after every change, paused on holiday days.
 8. ✅ **Holiday mode** with a shareable sitter's plan; **monthly backup** reminders and automatic snapshots.
 9. **Fun extras:** a watering streak, and a short celebration when the day's list is done.

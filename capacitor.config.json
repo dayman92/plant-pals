@@ -1,0 +1,14 @@
+{
+  "appId": "io.github.dayman92.plantpals",
+  "appName": "Plant Pals",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#FFF6E9"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_plant",
+      "iconColor": "#F28C28"
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "name": "plant-pals",
+  "version": "1.0.0",
+  "description": "A small phone app for tracking houseplants, the rooms they live in, and their watering schedules. Local use only for now: no accounts, no server, and all data stays on the device.",
+  "scripts": {
+    "sync": "cap sync android",
+    "apk": "powershell -ExecutionPolicy Bypass -File scripts/build-apk.ps1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dayman92/plant-pals.git"
+  },
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/dayman92/plant-pals/issues"
+  },
+  "homepage": "https://github.com/dayman92/plant-pals#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.6.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.3",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/local-notifications": "^8.3.1",
+    "@capacitor/share": "^8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^8.6.3"
+  },
+  "private": true
+}

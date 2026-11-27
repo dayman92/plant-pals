@@ -9,3 +9,16 @@ plant-pals-import*.json
 Thumbs.db
 .vscode/
 __pycache__/
+
+# Native app build
+node_modules/
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/keystore.properties
+*.keystore
+*.jks
+*.apk
+*.aab
+dist/
